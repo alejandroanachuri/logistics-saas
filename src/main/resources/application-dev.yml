@@ -1,0 +1,38 @@
+# =============================================================================
+# application-dev.yml — local development overrides
+# =============================================================================
+# Activated with `-Dspring-boot.run.profiles=dev` (or SPRING_PROFILES_ACTIVE=dev).
+# Goal: ease debugging and remove guardrails that don't help during
+# development. NONE of these overrides are safe in production.
+# =============================================================================
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+app:
+  cookies:
+    # Browsers reject Secure cookies on http://localhost — disable for dev.
+    secure: false
+  rate-limit:
+    # Disabled in dev: don't make manual testing annoying. Re-enabled
+    # in integration tests via @ActiveProfiles("it") when needed.
+    enabled: false
+  email:
+    enabled: false  # NoOpEmailService is the active bean.
+
+sentry:
+  enabled: false  # Never send errors to Sentry from dev.
+
+logging:
+  level:
+    root: INFO
+    ar.com.logistics: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE

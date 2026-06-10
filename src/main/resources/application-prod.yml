@@ -1,0 +1,30 @@
+# =============================================================================
+# application-prod.yml — production overrides
+# =============================================================================
+# Activated with `SPRING_PROFILES_ACTIVE=prod`. Tightens everything
+# that dev relaxes: secure cookies, rate limit on, Sentry on when
+# DSN is present, INFO-level logging with no SQL dump.
+# =============================================================================
+
+app:
+  cookies:
+    secure: true
+  rate-limit:
+    enabled: true
+  email:
+    # Will be flipped to true once SMTP creds are provisioned.
+    enabled: false
+
+sentry:
+  enabled: true
+  dsn: ${SENTRY_DSN}
+  environment: prod
+  traces-sample-rate: 0.1
+  send-default-pii: false
+
+logging:
+  level:
+    root: INFO
+    ar.com.logistics: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: ERROR

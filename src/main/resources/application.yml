@@ -1,0 +1,146 @@
+# =============================================================================
+# application.yml — Logistics SaaS base configuration
+# =============================================================================
+# Profile-agnostic defaults. Per-profile overrides live in
+# application-dev.yml and application-prod.yml.
+#
+# DataSource note: PR1 introduces a 3-DataSource routing layer
+# (companyDataSource / systemDataSource / platformDataSource). The
+# base config below targets a single DataSource so the starter test
+# passes; PR1 will replace this with the routing config and three
+# per-DS Hikari pools. The maximum-pool-size: 5 value here is the
+# per-DS target — the combined pool is 5 * 3 = 15 connections.
+# =============================================================================
+
+spring:
+  application:
+    name: logistics-saas
+
+  # ----- DataSource (single, to be split into 3 in PR1) -----
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USER}
+    password: ${DATABASE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      # Per-DS pool. Three DataSources in production = 15 connections
+      # total, which fits a 2 vCPU / 4 GB Postgres without saturating
+      # max_connections (default 100).
+      maximum-pool-size: 5
+      minimum-idle: 1
+      pool-name: LogisticsHikariPool
+      connection-timeout: 30000
+      validation-timeout: 5000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  # ----- JPA / Hibernate -----
+  jpa:
+    hibernate:
+      # Flyway owns the schema; never let Hibernate create or modify
+      # anything in production. Dev keeps the same setting to avoid
+      # schema drift between environments.
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+        format_sql: false
+
+  # ----- Flyway -----
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: true
+
+  # ----- Jackson -----
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+    default-property-inclusion: non_null
+
+  # ----- MVC -----
+  mvc:
+    problemdetails:
+      enabled: false  # we use our own error envelope (PR2)
+
+server:
+  port: 8080
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# =============================================================================
+# Application-specific config — typed via AppProperties (PR2)
+# =============================================================================
+app:
+  jwt:
+    secret: ${JWT_SECRET}                 # base64, ≥256 bits (32 bytes)
+    access-token-ttl: PT15M               # ISO-8601 duration
+    refresh-token-ttl: P7D
+    issuer: logistics-saas
+    audience: logistics-saas-web
+
+  cookies:
+    secure: true
+    same-site: Strict
+    http-only: true
+
+  email:
+    enabled: false
+    from-address: no-reply@logistica.local
+    from-name: Logistics SaaS
+
+  rate-limit:
+    enabled: true
+    register-per-hour: 5
+    login-per-minute: 10
+    availability-per-minute: 30
+
+  lockout:
+    max-failed-attempts: 5
+    window-minutes: 15
+    lockout-minutes: 30
+
+  rls:
+    enabled: true
+
+  cors:
+    allowed-origins:
+      - http://localhost:4200
+
+# =============================================================================
+# Sentry — runtime error tracking. Empty DSN disables Sentry.
+# =============================================================================
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: ${SPRING_PROFILES_ACTIVE:dev}
+  send-default-pii: false
+  traces-sample-rate: 0.2
+  enabled: false  # flipped to true in application-prod.yml when DSN is set
+
+# =============================================================================
+# Logging — base level. Profile-specific logback config lives in
+# logback-spring.xml and switches to JSON output under prod.
+# =============================================================================
+logging:
+  level:
+    root: INFO
+    ar.com.logistics: INFO
+    org.springframework.security: INFO
+    org.hibernate.SQL: WARN
+    org.flywaydb: INFO

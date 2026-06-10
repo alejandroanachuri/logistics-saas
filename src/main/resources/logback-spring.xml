@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  logback-spring.xml — Logistics SaaS logging configuration.
+
+  Profile-driven appenders:
+    - dev: human-readable pattern on console, with DEBUG for ar.com.logistics
+    - prod: JSON encoder (logstash-logback-encoder) on console for
+            log aggregators, plus a daily-rotating file in logs/app.log
+            for local retention.
+-->
+<configuration>
+
+  <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+  <property name="LOG_FILE" value="${LOG_FILE:-logs/app.log}"/>
+  <property name="LOG_PATTERN"
+            value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"/>
+
+  <!-- =========== Console appender =========== -->
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>${LOG_PATTERN}</pattern>
+    </encoder>
+  </appender>
+
+  <!-- =========== JSON console appender (prod only) =========== -->
+  <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+      <includeMdcKeyName>tenantId</includeMdcKeyName>
+      <includeMdcKeyName>userId</includeMdcKeyName>
+      <includeMdcKeyName>scope</includeMdcKeyName>
+      <includeMdcKeyName>requestId</includeMdcKeyName>
+      <customFields>{"service":"logistics-saas-backend"}</customFields>
+    </encoder>
+  </appender>
+
+  <!-- =========== Daily-rotating file appender =========== -->
+  <appender name="FILE"
+            class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>${LOG_FILE}</file>
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+      <fileNamePattern>${LOG_FILE}.%d{yyyy-MM-dd}.gz</fileNamePattern>
+      <maxFileSize>50MB</maxFileSize>
+      <maxHistory>14</maxHistory>
+      <totalSizeCap>2GB</totalSizeCap>
+    </rollingPolicy>
+    <encoder>
+      <pattern>${LOG_PATTERN}</pattern>
+    </encoder>
+  </appender>
+
+  <!-- =========== Profile-driven root =========== -->
+  <springProfile name="dev,test">
+    <root level="INFO">
+      <appender-ref ref="CONSOLE"/>
+    </root>
+    <logger name="ar.com.logistics" level="DEBUG"/>
+    <logger name="org.springframework.security" level="DEBUG"/>
+  </springProfile>
+
+  <springProfile name="prod">
+    <root level="INFO">
+      <appender-ref ref="CONSOLE_JSON"/>
+      <appender-ref ref="FILE"/>
+    </root>
+    <logger name="ar.com.logistics" level="INFO"/>
+  </springProfile>
+
+  <springProfile name="!dev &amp; !test &amp; !prod">
+    <root level="INFO">
+      <appender-ref ref="CONSOLE"/>
+    </root>
+  </springProfile>
+
+  <!-- Sentry appender — only installed if the Sentry SDK is on the
+       classpath (always true here) and a DSN is configured at runtime. -->
+  <if condition='isDefined("sentry.dsn") &amp;&amp; !"".equals(property("sentry.dsn"))'>
+    <then>
+      <appender name="SENTRY" class="io.sentry.logback.SentryAppender">
+        <minimumEventLevel>ERROR</minimumEventLevel>
+        <minimumBreadcrumbLevel>INFO</minimumBreadcrumbLevel>
+      </appender>
+    </then>
+  </if>
+</configuration>
