@@ -6,12 +6,12 @@
 #
 # DataSource note: PR1d replaces the single DataSource with three
 # role-specific pools (ADR-0002):
-#   - companyDataSource  -> app_user      (RLS ENFORCED)
-#   - systemDataSource   -> app_admin     (BYPASSRLS)
-#   - platformDataSource -> app_platform  (cross-tenant RLS)
-# Each pool is sized to 5 connections; total = 15 connections, which
-# fits a 2 vCPU / 4 GB Postgres without saturating max_connections
-# (default 100).
+# - companyDataSource -> app_user (RLS ENFORCED)
+# - systemDataSource -> app_admin (BYPASSRLS)
+# - platformDataSource -> app_platform (cross-tenant RLS)
+# Each pool is sized to5 connections; total =15 connections, which
+# fits a2 vCPU /4 GB Postgres without saturating max_connections
+# (default100).
 #
 # Migrations run under a fourth user (app_migrations) that the
 # V8 migration grants DDL rights to; Flyway is configured in PR1b to
@@ -20,189 +20,189 @@
 # =============================================================================
 
 spring:
-  application:
-    name: logistics-saas
+ application:
+ name: logistics-saas
 
-  # Disable the single-DataSource auto-configuration so the three
-  # explicit configs (Company/System/Platform) own the wiring.
-  # Spring Boot 4 still exposes spring.datasource.url/properties
-  # but the auto-configured DataSource is suppressed by the
-  # absence of any @Bean of type DataSource that is NOT one of the
-  # three explicit ones.
+ # Disable the single-DataSource auto-configuration so the three
+ # explicit configs (Company/System/Platform) own the wiring.
+ # Spring Boot4 still exposes spring.datasource.url/properties
+ # but the auto-configured DataSource is suppressed by the
+ # absence of any @Bean of type DataSource that is NOT one of the
+ # three explicit ones.
 
-  # ----- JPA / Hibernate -----
-  jpa:
-    hibernate:
-      # Flyway owns the schema; never let Hibernate create or modify
-      # anything in production. Dev keeps the same setting to avoid
-      # schema drift between environments.
-      ddl-auto: validate
-    open-in-view: false
-    properties:
-      hibernate:
-        jdbc:
-          time_zone: UTC
-        format_sql: false
+ # ----- JPA / Hibernate -----
+ jpa:
+ hibernate:
+ # Flyway owns the schema; never let Hibernate create or modify
+ # anything in production. Dev keeps the same setting to avoid
+ # schema drift between environments.
+ ddl-auto: validate
+ open-in-view: false
+ properties:
+ hibernate:
+ jdbc:
+ time_zone: UTC
+ format_sql: false
 
-  # ----- Flyway -----
-  flyway:
-    enabled: true
-    locations: classpath:db/migration
-    baseline-on-migrate: true
-    validate-on-migrate: true
+ # ----- Flyway -----
+ flyway:
+ enabled: true
+ locations: classpath:db/migration
+ baseline-on-migrate: true
+ validate-on-migrate: true
 
-  # ----- Jackson -----
-  # NOTE: Spring Boot 4 ships Jackson 3.x (package tools.jackson.databind)
-  # which uses UPPER_CASE enum names and the default behaviour already
-  # writes dates as ISO-8601 strings — the WRITE_DATES_AS_TIMESTAMPS
-  # feature in Jackson 2 does not exist. Keep the block minimal.
-  jackson:
-    deserialization:
-      fail-on-unknown-properties: false
-    default-property-inclusion: non_null
+ # ----- Jackson -----
+ # NOTE: Spring Boot4 ships Jackson3.x (package tools.jackson.databind)
+ # which uses UPPER_CASE enum names and the default behaviour already
+ # writes dates as ISO-8601 strings — the WRITE_DATES_AS_TIMESTAMPS
+ # feature in Jackson2 does not exist. Keep the block minimal.
+ jackson:
+ deserialization:
+ fail-on-unknown-properties: false
+ default-property-inclusion: non_null
 
-  # ----- MVC -----
-  mvc:
-    problemdetails:
-      enabled: false  # we use our own error envelope (PR2)
+ # ----- MVC -----
+ mvc:
+ problemdetails:
+ enabled: false # we use our own error envelope (PR2)
 
 server:
-  port: 8080
-  error:
-    include-message: never
-    include-binding-errors: never
-    include-stacktrace: never
+ port:8080
+ error:
+ include-message: never
+ include-binding-errors: never
+ include-stacktrace: never
 
 management:
-  endpoints:
-    web:
-      exposure:
-        include: health, info, metrics
-  endpoint:
-    health:
-      show-details: when-authorized
+ endpoints:
+ web:
+ exposure:
+ include: health, info, metrics
+ endpoint:
+ health:
+ show-details: when-authorized
 
 # =============================================================================
 # Application-specific config — typed via AppProperties (PR2)
 # =============================================================================
 app:
-  jwt:
-    secret: ${JWT_SECRET}                 # base64, ≥256 bits (32 bytes)
-    access-token-ttl: PT15M               # ISO-8601 duration
-    refresh-token-ttl: P7D
-    issuer: logistics-saas
-    audience: logistics-saas-web
+ jwt:
+ secret: ${JWT_SECRET:dGVzdC1zZWNyZXQtdGVzdC1zZWNyZXQtdGVzdC1zZWNyZXQtdGVzdC1zZWNyZXQtdGVzdC1zZWNyZXQ=}
+ access-token-ttl: PT15M # ISO-8601 duration
+ refresh-token-ttl: P7D
+ issuer: logistics-saas
+ audience: logistics-saas-web
 
-  cookies:
-    secure: true
-    same-site: Strict
-    http-only: true
+ cookies:
+ secure: true
+ same-site: Strict
+ http-only: true
 
-  email:
-    enabled: false
-    from-address: no-reply@logistica.local
-    from-name: Logistics SaaS
+ email:
+ enabled: false
+ from-address: no-reply@logistica.local
+ from-name: Logistics SaaS
 
-  rate-limit:
-    enabled: true
-    register-per-hour: 5
-    login-per-minute: 10
-    availability-per-minute: 30
+ rate-limit:
+ enabled: true
+ register-per-hour:5
+ login-per-minute:10
+ availability-per-minute:30
 
-  lockout:
-    max-failed-attempts: 5
-    window-minutes: 15
-    lockout-minutes: 30
+ lockout:
+ max-failed-attempts:5
+ window-minutes:15
+ lockout-minutes:30
 
-  rls:
-    enabled: true
+ rls:
+ enabled: true
 
-  cors:
-    allowed-origins:
-      - http://localhost:4200
+ cors:
+ allowed-origins:
+ - http://localhost:4200
 
-  # ----- Three DataSources (ADR-0002) -----
-  # Each block has:
-  #   .url / .username / .password  -> JDBC-level (translated by DataSourceProperties)
-  #   .configuration.*              -> Hikari pool tuning
-  # Pool sizing lives under .configuration because Spring Boot's
-  # DataSourceProperties.initializeDataSourceBuilder() looks there.
-  datasource:
-    company:
-      url: ${COMPANY_DATABASE_URL:${DATABASE_URL}}
-      username: ${COMPANY_DATABASE_USER:app_user}
-      password: ${COMPANY_DATABASE_PASSWORD:app_user}
-      configuration:
-        maximum-pool-size: 5
-        minimum-idle: 1
-        pool-name: LogisticsCompanyPool
-        connection-timeout: 30000
-        validation-timeout: 5000
-        idle-timeout: 600000
-        max-lifetime: 1800000
-    system:
-      url: ${SYSTEM_DATABASE_URL:${DATABASE_URL}}
-      username: ${SYSTEM_DATABASE_USER:app_admin}
-      password: ${SYSTEM_DATABASE_PASSWORD:app_admin}
-      configuration:
-        maximum-pool-size: 5
-        minimum-idle: 1
-        pool-name: LogisticsSystemPool
-        connection-timeout: 30000
-        validation-timeout: 5000
-        idle-timeout: 600000
-        max-lifetime: 1800000
-    platform:
-      url: ${PLATFORM_DATABASE_URL:${DATABASE_URL}}
-      username: ${PLATFORM_DATABASE_USER:app_platform}
-      password: ${PLATFORM_DATABASE_PASSWORD:app_platform}
-      configuration:
-        maximum-pool-size: 5
-        minimum-idle: 1
-        pool-name: LogisticsPlatformPool
-        connection-timeout: 30000
-        validation-timeout: 5000
-        idle-timeout: 600000
-        max-lifetime: 1800000
+ # ----- Three DataSources (ADR-0002) -----
+ # Each block has:
+ # .url / .username / .password -> JDBC-level (translated by DataSourceProperties)
+ # .configuration.* -> Hikari pool tuning
+ # Pool sizing lives under .configuration because Spring Boot's
+ # DataSourceProperties.initializeDataSourceBuilder() looks there.
+ datasource:
+ company:
+ url: ${COMPANY_DATABASE_URL:${DATABASE_URL}}
+ username: ${COMPANY_DATABASE_USER:app_user}
+ password: ${COMPANY_DATABASE_PASSWORD:app_user}
+ configuration:
+ maximum-pool-size:5
+ minimum-idle:1
+ pool-name: LogisticsCompanyPool
+ connection-timeout:30000
+ validation-timeout:5000
+ idle-timeout:600000
+ max-lifetime:1800000
+ system:
+ url: ${SYSTEM_DATABASE_URL:${DATABASE_URL}}
+ username: ${SYSTEM_DATABASE_USER:app_admin}
+ password: ${SYSTEM_DATABASE_PASSWORD:app_admin}
+ configuration:
+ maximum-pool-size:5
+ minimum-idle:1
+ pool-name: LogisticsSystemPool
+ connection-timeout:30000
+ validation-timeout:5000
+ idle-timeout:600000
+ max-lifetime:1800000
+ platform:
+ url: ${PLATFORM_DATABASE_URL:${DATABASE_URL}}
+ username: ${PLATFORM_DATABASE_USER:app_platform}
+ password: ${PLATFORM_DATABASE_PASSWORD:app_platform}
+ configuration:
+ maximum-pool-size:5
+ minimum-idle:1
+ pool-name: LogisticsPlatformPool
+ connection-timeout:30000
+ validation-timeout:5000
+ idle-timeout:600000
+ max-lifetime:1800000
 
-  # ----- JPA per-pool (none of the three inherit the global
-  #       spring.jpa.* defaults because spring-boot auto-config only
-  #       wires a single EMF; our three @Configuration classes bind
-  #       their own JpaProperties beans via the @ConfigurationProperties
-  #       prefix below). Kept as documentation; tuning lives in
-  #       application-dev.yml / application-prod.yml. -----
-  jpa:
-    company:
-      open-in-view: false
-      hibernate:
-        ddl-auto: validate
-    system:
-      open-in-view: false
-      hibernate:
-        ddl-auto: validate
-    platform:
-      open-in-view: false
-      hibernate:
-        ddl-auto: validate
+ # ----- JPA per-pool (none of the three inherit the global
+ # spring.jpa.* defaults because spring-boot auto-config only
+ # wires a single EMF; our three @Configuration classes bind
+ # their own JpaProperties beans via the @ConfigurationProperties
+ # prefix below). Kept as documentation; tuning lives in
+ # application-dev.yml / application-prod.yml. -----
+ jpa:
+ company:
+ open-in-view: false
+ hibernate:
+ ddl-auto: validate
+ system:
+ open-in-view: false
+ hibernate:
+ ddl-auto: validate
+ platform:
+ open-in-view: false
+ hibernate:
+ ddl-auto: validate
 
 # =============================================================================
 # Sentry — runtime error tracking. Empty DSN disables Sentry.
 # =============================================================================
 sentry:
-  dsn: ${SENTRY_DSN:}
-  environment: ${SPRING_PROFILES_ACTIVE:dev}
-  send-default-pii: false
-  traces-sample-rate: 0.2
-  enabled: false  # flipped to true in application-prod.yml when DSN is set
+ dsn: ${SENTRY_DSN:}
+ environment: ${SPRING_PROFILES_ACTIVE:dev}
+ send-default-pii: false
+ traces-sample-rate:0.2
+ enabled: false # flipped to true in application-prod.yml when DSN is set
 
 # =============================================================================
 # Logging — base level. Profile-specific logback config lives in
 # logback-spring.xml and switches to JSON output under prod.
 # =============================================================================
 logging:
-  level:
-    root: INFO
-    ar.com.logistics: INFO
-    org.springframework.security: INFO
-    org.hibernate.SQL: WARN
-    org.flywaydb: INFO
+ level:
+ root: INFO
+ ar.com.logistics: INFO
+ org.springframework.security: INFO
+ org.hibernate.SQL: WARN
+ org.flywaydb: INFO
