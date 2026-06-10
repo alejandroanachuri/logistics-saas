@@ -1,6 +1,9 @@
 package ar.com.logistics.tenant;
 
 import java.util.UUID;
+import javax.sql.DataSource;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -39,15 +42,16 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 @Component
 public class RlsConnectionCustomizer {
 
-    private final RlsAspect rlsAspect;
+    private final DataSource companyDataSource;
 
-    public RlsConnectionCustomizer(RlsAspect rlsAspect) {
-        this.rlsAspect = rlsAspect;
+    public RlsConnectionCustomizer(@Qualifier("companyDataSource") DataSource companyDataSource) {
+        this.companyDataSource = companyDataSource;
     }
 
     /**
      * Register a transaction synchronization that will emit the
-     * {@code SET LOCAL} GUC during {@link TransactionSynchronization#beforeCompletion()},
+     * {@code SET LOCAL} GUC during
+     * {@link TransactionSynchronization#beforeCompletion()},
      * which runs while the transaction (and therefore the JDBC
      * connection) is still active.
      *
@@ -74,7 +78,8 @@ public class RlsConnectionCustomizer {
             throw new IllegalStateException(
                     "companyDataSource accessed without a TenantContext. Did the authentication filter run?");
         }
-        TransactionSynchronizationManager.registerSynchronization(new TenantSynchronization(tenantId, rlsAspect));
+        TransactionSynchronizationManager.registerSynchronization(
+                new TenantSynchronization(tenantId, companyDataSource));
     }
 
     /**
@@ -86,11 +91,11 @@ public class RlsConnectionCustomizer {
     private static final class TenantSynchronization implements TransactionSynchronization {
 
         private final UUID tenantId;
-        private final RlsAspect rlsAspect;
+        private final DataSource companyDataSource;
 
-        TenantSynchronization(UUID tenantId, RlsAspect rlsAspect) {
+        TenantSynchronization(UUID tenantId, DataSource companyDataSource) {
             this.tenantId = tenantId;
-            this.rlsAspect = rlsAspect;
+            this.companyDataSource = companyDataSource;
         }
 
         @Override
@@ -100,8 +105,7 @@ public class RlsConnectionCustomizer {
             // connection via Spring's DataSourceUtils on the
             // companyDataSource. The Hikari physical connection is
             // the same one Hibernate will use for the next statement.
-            try (java.sql.Connection conn =
-                    org.springframework.jdbc.datasource.DataSourceUtils.getConnection(rlsAspect.companyDataSource())) {
+            try (java.sql.Connection conn = DataSourceUtils.getConnection(companyDataSource)) {
                 RlsAspect.setCurrentTenantOnConnection(conn, tenantId);
             } catch (java.sql.SQLException ex) {
                 // Postgres rejects SET LOCAL outside a tx with 25001.
