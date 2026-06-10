@@ -288,6 +288,23 @@
 					</execution>
 				</executions>
 			</plugin>
+
+			<!-- Failsafe: integration tests (*IT.java) run during `mvn verify`
+			     but NOT during `mvn test`. Surefire (above) handles the
+			     short *Test classes. Naming convention: a class is an
+			     integration test if it ends in `IT`. -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<executions>
+					<execution>
+						<goals>
+							<goal>integration-test</goal>
+							<goal>verify</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 	</build>
 </project>

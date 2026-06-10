@@ -7,6 +7,14 @@
     - prod: JSON encoder (logstash-logback-encoder) on console for
             log aggregators, plus a daily-rotating file in logs/app.log
             for local retention.
+
+  PR1d note: the Sentry appender used to be gated by a <if> element
+  that requires the Janino library on the classpath. Janino is not a
+  transitive dependency of Sentry 7, so the conditional silently failed.
+  The Sentry SDK is a no-op when no DSN is configured, so the
+  appender is removed entirely. If/when we want Sentry log capture,
+  add <appender-ref ref="SENTRY"/> in a <springProfile name="prod">
+  block and define the SENTRY appender inline without the <if>.
 -->
 <configuration>
 
@@ -71,15 +79,4 @@
       <appender-ref ref="CONSOLE"/>
     </root>
   </springProfile>
-
-  <!-- Sentry appender — only installed if the Sentry SDK is on the
-       classpath (always true here) and a DSN is configured at runtime. -->
-  <if condition='isDefined("sentry.dsn") &amp;&amp; !"".equals(property("sentry.dsn"))'>
-    <then>
-      <appender name="SENTRY" class="io.sentry.logback.SentryAppender">
-        <minimumEventLevel>ERROR</minimumEventLevel>
-        <minimumBreadcrumbLevel>INFO</minimumBreadcrumbLevel>
-      </appender>
-    </then>
-  </if>
 </configuration>

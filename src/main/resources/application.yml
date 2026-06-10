@@ -4,35 +4,31 @@
 # Profile-agnostic defaults. Per-profile overrides live in
 # application-dev.yml and application-prod.yml.
 #
-# DataSource note: PR1 introduces a 3-DataSource routing layer
-# (companyDataSource / systemDataSource / platformDataSource). The
-# base config below targets a single DataSource so the starter test
-# passes; PR1 will replace this with the routing config and three
-# per-DS Hikari pools. The maximum-pool-size: 5 value here is the
-# per-DS target — the combined pool is 5 * 3 = 15 connections.
+# DataSource note: PR1d replaces the single DataSource with three
+# role-specific pools (ADR-0002):
+#   - companyDataSource  -> app_user      (RLS ENFORCED)
+#   - systemDataSource   -> app_admin     (BYPASSRLS)
+#   - platformDataSource -> app_platform  (cross-tenant RLS)
+# Each pool is sized to 5 connections; total = 15 connections, which
+# fits a 2 vCPU / 4 GB Postgres without saturating max_connections
+# (default 100).
+#
+# Migrations run under a fourth user (app_migrations) that the
+# V8 migration grants DDL rights to; Flyway is configured in PR1b to
+# use DATABASE_MIGRATION_URL/USER/PASSWORD when those env vars are
+# present, otherwise it falls back to the systemDataSource pool.
 # =============================================================================
 
 spring:
   application:
     name: logistics-saas
 
-  # ----- DataSource (single, to be split into 3 in PR1) -----
-  datasource:
-    url: ${DATABASE_URL}
-    username: ${DATABASE_USER}
-    password: ${DATABASE_PASSWORD}
-    driver-class-name: org.postgresql.Driver
-    hikari:
-      # Per-DS pool. Three DataSources in production = 15 connections
-      # total, which fits a 2 vCPU / 4 GB Postgres without saturating
-      # max_connections (default 100).
-      maximum-pool-size: 5
-      minimum-idle: 1
-      pool-name: LogisticsHikariPool
-      connection-timeout: 30000
-      validation-timeout: 5000
-      idle-timeout: 600000
-      max-lifetime: 1800000
+  # Disable the single-DataSource auto-configuration so the three
+  # explicit configs (Company/System/Platform) own the wiring.
+  # Spring Boot 4 still exposes spring.datasource.url/properties
+  # but the auto-configured DataSource is suppressed by the
+  # absence of any @Bean of type DataSource that is NOT one of the
+  # three explicit ones.
 
   # ----- JPA / Hibernate -----
   jpa:
@@ -56,9 +52,11 @@ spring:
     validate-on-migrate: true
 
   # ----- Jackson -----
+  # NOTE: Spring Boot 4 ships Jackson 3.x (package tools.jackson.databind)
+  # which uses UPPER_CASE enum names and the default behaviour already
+  # writes dates as ISO-8601 strings — the WRITE_DATES_AS_TIMESTAMPS
+  # feature in Jackson 2 does not exist. Keep the block minimal.
   jackson:
-    serialization:
-      write-dates-as-timestamps: false
     deserialization:
       fail-on-unknown-properties: false
     default-property-inclusion: non_null
@@ -122,6 +120,70 @@ app:
   cors:
     allowed-origins:
       - http://localhost:4200
+
+  # ----- Three DataSources (ADR-0002) -----
+  # Each block has:
+  #   .url / .username / .password  -> JDBC-level (translated by DataSourceProperties)
+  #   .configuration.*              -> Hikari pool tuning
+  # Pool sizing lives under .configuration because Spring Boot's
+  # DataSourceProperties.initializeDataSourceBuilder() looks there.
+  datasource:
+    company:
+      url: ${COMPANY_DATABASE_URL:${DATABASE_URL}}
+      username: ${COMPANY_DATABASE_USER:app_user}
+      password: ${COMPANY_DATABASE_PASSWORD:app_user}
+      configuration:
+        maximum-pool-size: 5
+        minimum-idle: 1
+        pool-name: LogisticsCompanyPool
+        connection-timeout: 30000
+        validation-timeout: 5000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+    system:
+      url: ${SYSTEM_DATABASE_URL:${DATABASE_URL}}
+      username: ${SYSTEM_DATABASE_USER:app_admin}
+      password: ${SYSTEM_DATABASE_PASSWORD:app_admin}
+      configuration:
+        maximum-pool-size: 5
+        minimum-idle: 1
+        pool-name: LogisticsSystemPool
+        connection-timeout: 30000
+        validation-timeout: 5000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+    platform:
+      url: ${PLATFORM_DATABASE_URL:${DATABASE_URL}}
+      username: ${PLATFORM_DATABASE_USER:app_platform}
+      password: ${PLATFORM_DATABASE_PASSWORD:app_platform}
+      configuration:
+        maximum-pool-size: 5
+        minimum-idle: 1
+        pool-name: LogisticsPlatformPool
+        connection-timeout: 30000
+        validation-timeout: 5000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+
+  # ----- JPA per-pool (none of the three inherit the global
+  #       spring.jpa.* defaults because spring-boot auto-config only
+  #       wires a single EMF; our three @Configuration classes bind
+  #       their own JpaProperties beans via the @ConfigurationProperties
+  #       prefix below). Kept as documentation; tuning lives in
+  #       application-dev.yml / application-prod.yml. -----
+  jpa:
+    company:
+      open-in-view: false
+      hibernate:
+        ddl-auto: validate
+    system:
+      open-in-view: false
+      hibernate:
+        ddl-auto: validate
+    platform:
+      open-in-view: false
+      hibernate:
+        ddl-auto: validate
 
 # =============================================================================
 # Sentry — runtime error tracking. Empty DSN disables Sentry.
