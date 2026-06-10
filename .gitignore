@@ -47,6 +47,8 @@ Desktop.ini
 # ===== Logs =====
 *.log
 logs/
+mvn-test.log*
+mvn-test.out*
 
 # ===== Local config / secrets =====
 .env

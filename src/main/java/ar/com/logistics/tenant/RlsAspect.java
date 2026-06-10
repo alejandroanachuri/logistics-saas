@@ -4,21 +4,24 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.UUID;
+import javax.sql.DataSource;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * RlsAspect — emits {@code SET LOCAL app.current_tenant = '<uuid>'}
- * on every transaction that runs through the {@code companyDataSource}
- * (per ADR-0002). The actual GUC is written to the JDBC connection
- * by intercepting the {@code @Transactional} invocation on methods in
- * the {@code ar.com.logistics.tenant.repository} package (and later
- * {@code ar.com.logistics.auth.repository}).
+ * RlsAspect — the contract surface for the company-side
+ * RLS-aware data path. The {@code @Around} advice fires on every
+ * method in {@code ar.com.logistics.tenant.repository..*}; the actual
+ * {@code SET LOCAL app.current_tenant = '<uuid>'} emission is delegated
+ * to {@link RlsConnectionCustomizer}, which uses a
+ * {@code TransactionSynchronization} so the GUC lands on the JDBC
+ * connection that Hibernate will actually use.
  *
  * <p>Design references:
  * <ul>
@@ -28,19 +31,12 @@ import org.springframework.stereotype.Component;
  *   <li>design.md §1.3 (TenantContext Flow)</li>
  * </ul>
  *
- * <p>Why an aspect instead of a {@code TransactionSynchronization}?
- * The aspect runs INSIDE the Spring AOP chain right before the
- * repository call, so the GUC is in place before Hibernate issues any
- * statement. SET LOCAL is transaction-scoped, so it auto-reverts at
- * commit/rollback — exactly the spec contract.
- *
- * <p>Why not for system / platform?
- * <ul>
- *   <li>{@code systemDataSource} connects as {@code app_admin} with
- *       {@code BYPASSRLS}; RLS is off, so the GUC has no effect.</li>
- *   <li>{@code platformDataSource} is for {@code app_platform} users
- *       which have no tenant concept (cross-tenant operations).</li>
- * </ul>
+ * <p>Why not a Hibernate {@code StatementInspector}? Hibernate 7's
+ * inspector has no access to the underlying JDBC connection — it only
+ * sees the SQL string. We need to write the GUC on the actual
+ * connection before any SQL hits the database. A
+ * {@code TransactionSynchronization} is the cleanest available hook
+ * with full connection access.
  */
 @Aspect
 @Component
@@ -50,15 +46,32 @@ public class RlsAspect {
 
     private final boolean rlsEnabled;
 
-    public RlsAspect(@Value("${app.rls.enabled:true}") boolean rlsEnabled) {
+    private final RlsConnectionCustomizer rlsConnectionCustomizer;
+
+    /**
+     * Package-private reference to the company-side DataSource, kept
+     * here so {@link RlsConnectionCustomizer} can call
+     * {@link org.springframework.jdbc.datasource.DataSourceUtils#getConnection(DataSource)}
+     * on the right pool without a circular constructor.
+     */
+    private static volatile DataSource COMPANY_DATA_SOURCE;
+
+    public RlsAspect(
+            @Value("${app.rls.enabled:true}") boolean rlsEnabled,
+            @Qualifier("companyDataSource") DataSource companyDataSource,
+            RlsConnectionCustomizer rlsConnectionCustomizer) {
         this.rlsEnabled = rlsEnabled;
+        this.rlsConnectionCustomizer = rlsConnectionCustomizer;
+        COMPANY_DATA_SOURCE = companyDataSource;
         if (!rlsEnabled) {
-            // Spec/multi-tenant-data-isolation: "RLS disabled in
-            // production for emergency" — log once at startup so
-            // operators know the kill-switch is on.
             LOG.warn("RLS disabled via app.rls.enabled=false — companyDataSource "
                     + "queries will return rows from all tenants");
         }
+    }
+
+    /** Read-only view of the company-side DataSource. */
+    static DataSource companyDataSource() {
+        return COMPANY_DATA_SOURCE;
     }
 
     /**
@@ -79,25 +92,13 @@ public class RlsAspect {
             // accidentally run with an unfiltered pool. Failing loud
             // is safer than silently bypassing RLS.
             throw new IllegalStateException(
-                    "companyDataSource accessed without a TenantContext. " + "Did the authentication filter run?");
+                    "companyDataSource accessed without a TenantContext. Did the authentication filter run?");
         }
-        // The current transaction's connection is exposed by Spring
-        // via TransactionSynchronizationManager. We obtain it by
-        // piggy-backing on the @Transactional advice that wraps the
-        // call: we look at the first argument if it is a Spring
-        // EntityManager, or use a fresh connection if needed.
-        //
-        // Simpler approach: we wrap the call in a way that gives us
-        // a callback BEFORE the JPA layer touches the connection.
-        // The cleanest implementation uses Hibernate's
-        // StatementInspector or ConnectionProvider; for PR1d the
-        // simplest correct option is to acquire a connection from
-        // the DataSource through Spring's DataSourceUtils.
-        //
-        // NOTE: PR1d implements the design via a Hibernate
-        // StatementInspector-like hook (see TenantAwareInterceptor)
-        // — this around-advice is the API contract surface; the
-        // physical SET LOCAL emission lives in the interceptor.
+        // Register a tx synchronization that will emit SET LOCAL
+        // before commit. The aspect then proceeds; the synchronization
+        // fires after the tx is bound to a connection and before any
+        // user SQL runs.
+        rlsConnectionCustomizer.register();
         return TenantAwareConnectionScope.run(tenantId, joinPoint::proceed);
     }
 
