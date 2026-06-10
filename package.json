@@ -6,7 +6,15 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test --watch=false",
+    "test:coverage": "ng test --coverage",
+    "lint": "eslint \"src/**/*.{ts,html}\"",
+    "lint:fix": "eslint \"src/**/*.{ts,html}\" --fix",
+    "format": "prettier --write \"src/**/*.{ts,html,css,scss,json,md}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,html,css,scss,json,md}\"",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
+    "e2e:install": "playwright install --with-deps chromium"
   },
   "prettier": {
     "printWidth": 100,
@@ -23,12 +31,14 @@
   "private": true,
   "packageManager": "bun@1.2.9",
   "dependencies": {
+    "@angular/cdk": "^21.0.0",
     "@angular/common": "^21.0.0",
     "@angular/compiler": "^21.0.0",
     "@angular/core": "^21.0.0",
     "@angular/forms": "^21.0.0",
     "@angular/platform-browser": "^21.0.0",
     "@angular/router": "^21.0.0",
+    "@zxcvbn-ts/core": "^3.0.4",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
@@ -36,11 +46,20 @@
     "@angular/build": "^21.0.2",
     "@angular/cli": "^21.0.2",
     "@angular/compiler-cli": "^21.0.0",
+    "@eslint/js": "^9.15.0",
+    "@playwright/test": "^1.49.0",
     "@tailwindcss/postcss": "^4.1.12",
+    "@typescript-eslint/eslint-plugin": "^8.16.0",
+    "@typescript-eslint/parser": "^8.16.0",
+    "angular-eslint": "^21.0.0",
+    "eslint": "^9.15.0",
+    "globals": "^15.12.0",
     "jsdom": "^27.1.0",
     "postcss": "^8.5.3",
+    "prettier": "^3.3.3",
     "tailwindcss": "^4.1.12",
     "typescript": "~5.9.2",
+    "typescript-eslint": "^8.16.0",
     "vitest": "^4.0.8"
   }
 }
