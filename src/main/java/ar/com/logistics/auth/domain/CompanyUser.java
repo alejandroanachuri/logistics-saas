@@ -76,6 +76,17 @@ public class CompanyUser extends BaseEntity {
     }
 
     /**
+     * Setter for the BCrypt-hashed password. The registration
+     * service BCrypts the plain-text password and sets the result
+     * here. Kept package-private intentionally: callers outside
+     * {@code auth.service} should not be able to bypass the
+     * service's policy checks by setting the hash directly.
+     */
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
+    /**
      * Static factory used by the registration service to create a
      * fresh first-admin user. Sets the {@code id}, leaves the audit
      * timestamps to {@link BaseEntity}'s {@code @PrePersist}
