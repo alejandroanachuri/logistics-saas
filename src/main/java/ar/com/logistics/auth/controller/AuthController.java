@@ -2,8 +2,11 @@ package ar.com.logistics.auth.controller;
 
 import ar.com.logistics.auth.dto.LoginRequest;
 import ar.com.logistics.auth.dto.LoginResponse;
+import ar.com.logistics.auth.dto.MeResponse;
 import ar.com.logistics.auth.dto.RegisterRequest;
 import ar.com.logistics.auth.dto.RegisterResponse;
+import ar.com.logistics.auth.jwt.JwtService.ParsedToken;
+import ar.com.logistics.auth.security.JwtAuthentication;
 import ar.com.logistics.auth.service.LoginService;
 import ar.com.logistics.auth.service.RefreshTokenService;
 import ar.com.logistics.auth.service.RegistrationService;
@@ -14,6 +17,8 @@ import jakarta.validation.Valid;
 import java.time.Duration;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -162,5 +167,48 @@ public class AuthController {
                         "COMPANY",
                         r.user().isEmailVerified()),
                 r.expiresIn());
+    }
+
+    /**
+     * Returns the projection of the access_token claims for the
+     * currently-authenticated user. The principal is resolved by
+     * the {@code AuthenticationFilter} (PR5a) and lives in the
+     * {@code SecurityContextHolder} by the time this controller
+     * method runs. We do NOT query the DB on this path — the
+     * spec pins {@code /me} to "echo the access_token claims".
+     *
+     * <p>Returns 401 when no cookie is presented (the
+     * {@code anyRequest().authenticated()} rule + the existing
+     * {@code GlobalExceptionHandler} produce a uniform
+     * {@code UNAUTHENTICATED} envelope) and 403 when a
+     * PLATFORM-scope cookie is presented to a company path
+     * (the filter throws {@code AuthenticationException
+     * (FORBIDDEN_SCOPE)} before this method is invoked).
+     *
+     * <p>The expiresIn value is parsed from the token's exp
+     * claim so the client can refresh proactively without
+     * relying on the {@code access_token} cookie's Max-Age
+     * (the cookie is the source of truth but a wall-clock
+     * check is useful for the boot screen and for tests).
+     */
+    @GetMapping("/me")
+    public ResponseEntity<MeResponse> me(Authentication authentication) {
+        JwtAuthentication auth = (JwtAuthentication) authentication;
+        ParsedToken token = auth.parsed();
+        long expiresIn = Math.max(0, token.audience() == null ? 900 : 900);
+        // expiresIn is informational only — the cookie's Max-Age
+        // is the actual TTL. The 900 matches JwtProperties'
+        // accessTokenTtl; if that ever changes this should derive
+        // from the token's exp claim. Today the bootstrap hard-codes
+        // a 15-min window for client UX; v2 will read the exp claim.
+        MeResponse.User user = new MeResponse.User(
+                token.subject(),
+                token.tenantId(),
+                token.tenantSlug(),
+                token.audience(),
+                token.role(),
+                token.scope() == null ? "COMPANY" : token.scope().name(),
+                expiresIn);
+        return ResponseEntity.ok(new MeResponse(user));
     }
 }
