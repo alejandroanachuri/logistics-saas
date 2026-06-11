@@ -1,5 +1,6 @@
 package ar.com.logistics.config;
 
+import ar.com.logistics.auth.filter.AuthenticationFilter;
 import ar.com.logistics.auth.jwt.JwtProperties;
 import ar.com.logistics.common.cookie.CookieWriter;
 import ar.com.logistics.common.ratelimit.RateLimitFilter;
@@ -52,10 +53,15 @@ public class SecurityConfig {
 
     private final SecurityHeadersFilter securityHeadersFilter;
     private final RateLimitFilter rateLimitFilter;
+    private final AuthenticationFilter authenticationFilter;
 
-    public SecurityConfig(SecurityHeadersFilter securityHeadersFilter, RateLimitFilter rateLimitFilter) {
+    public SecurityConfig(
+            SecurityHeadersFilter securityHeadersFilter,
+            RateLimitFilter rateLimitFilter,
+            AuthenticationFilter authenticationFilter) {
         this.securityHeadersFilter = securityHeadersFilter;
         this.rateLimitFilter = rateLimitFilter;
+        this.authenticationFilter = authenticationFilter;
     }
 
     @Bean
@@ -72,12 +78,17 @@ public class SecurityConfig {
         //      (register, login, availability). Sits BEFORE the
         //      authentication filter so abusive traffic is dropped
         //      before reaching the auth code.
-        //   3. (Authentication filter lands in a follow-up PR.)
+        //   3. AuthenticationFilter — translates the access_token
+        //      cookie into a Spring Authentication. Must run BEFORE
+        //      any controller that reads @AuthenticationPrincipal.
         http.addFilterBefore(
                         securityHeadersFilter,
                         org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(
                         rateLimitFilter,
+                        org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(
+                        authenticationFilter,
                         org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
                 .csrf(csrf -> csrf.disable())
                 .httpBasic(basic -> basic.disable())
@@ -95,8 +106,10 @@ public class SecurityConfig {
                                 "/api/v1/tenants/me/username-availability",
                                 "/actuator/health")
                         .permitAll()
-                        // Everything else (including /api/v1/platform/**) is authenticated.
-                        // The actual filter that maps cookies to Authentication lands in PR4.
+                        // Everything else requires a valid access_token
+                        // cookie; the AuthenticationFilter above populates
+                        // the SecurityContextHolder. PR5+ endpoints land
+                        // here.
                         .anyRequest()
                         .authenticated())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()));
