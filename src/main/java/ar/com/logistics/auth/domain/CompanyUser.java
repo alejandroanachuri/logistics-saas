@@ -87,6 +87,34 @@ public class CompanyUser extends BaseEntity {
     }
 
     /**
+     * Setter for the failed-login counter. Updated by
+     * {@code LoginService} on every failed password match; reset to 0
+     * on every successful login.
+     */
+    public void setFailedLoginAttempts(int failedLoginAttempts) {
+        this.failedLoginAttempts = failedLoginAttempts;
+    }
+
+    /**
+     * Setter for the lockout timestamp. When non-null and in the
+     * future, the login flow rejects the attempt with
+     * {@code ACCOUNT_LOCKED}. The {@code LoginService} sets it on
+     * the 5th failed attempt and clears it on the next successful
+     * login.
+     */
+    public void setLockedUntil(Instant lockedUntil) {
+        this.lockedUntil = lockedUntil;
+    }
+
+    /**
+     * Setter for the last-login timestamp. Updated by
+     * {@code LoginService} on every successful login.
+     */
+    public void setLastLoginAt(Instant lastLoginAt) {
+        this.lastLoginAt = lastLoginAt;
+    }
+
+    /**
      * Static factory used by the registration service to create a
      * fresh first-admin user. Sets the {@code id}, leaves the audit
      * timestamps to {@link BaseEntity}'s {@code @PrePersist}
@@ -107,7 +135,7 @@ public class CompanyUser extends BaseEntity {
         u.emailVerified = false;
         u.status = UserStatus.PENDING_VERIFICATION;
         u.verificationToken = UUID.randomUUID();
-        u.verificationTokenExpiresAt = java.time.Instant.now().plus(java.time.Duration.ofHours(24));
+        u.verificationTokenExpiresAt = Instant.now().plus(java.time.Duration.ofHours(24));
         return u;
     }
 }

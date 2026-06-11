@@ -45,8 +45,15 @@ public class PlatformJpaConfig {
             @Qualifier("platformDataSource") DataSource dataSource,
             @Qualifier("platformJpaProperties") JpaProperties jpaProperties) {
         EntityManagerFactoryBuilder builder = createEntityManagerFactoryBuilder(jpaProperties);
+        // TenantAdminRepository (cross-tenant lookup) operates on
+        // ar.com.logistics.tenant.domain.Tenant; the cross-tenant
+        // RLS policies on the platform pool let us read all rows.
+        // Same entity in multiple persistence units is OK per ADR-0002.
         return builder.dataSource(dataSource)
-                .packages("ar.com.logistics.platform.domain")
+                .packages(
+                        "ar.com.logistics.platform.domain",
+                        "ar.com.logistics.tenant.domain",
+                        "ar.com.logistics.auth.domain")
                 .persistenceUnit("platform")
                 .build();
     }

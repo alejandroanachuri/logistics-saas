@@ -1,7 +1,5 @@
 package ar.com.logistics.common.audit;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
 import javax.sql.DataSource;
 import org.slf4j.Logger;
@@ -10,6 +8,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Writes {@link AuditEvent}s to {@code public.audit_log}. The logger
@@ -72,7 +72,7 @@ public class AuditLogger {
         }
         try {
             return objectMapper.writeValueAsString(metadata);
-        } catch (JsonProcessingException ex) {
+        } catch (JacksonException ex) {
             LOG.warn("Could not serialize audit metadata, falling back to empty map", ex);
             return "{}";
         }

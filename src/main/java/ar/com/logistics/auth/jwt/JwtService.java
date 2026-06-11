@@ -5,6 +5,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.Date;
 import java.util.UUID;
 import javax.crypto.SecretKey;
@@ -14,24 +15,20 @@ import org.springframework.stereotype.Service;
  * Issues and verifies the access tokens used by the company and platform
  * paths. Refresh tokens are opaque UUIDs persisted in
  * {@code refresh_tokens} and are NOT issued by this service (see
- * {@code design.md} §4 and ADR-0004).
+ * {@code design.md} section4 and ADR-0004).
  *
  * <p>Shape per ADR-0003:
  * <ul>
- * <li>Company access token claims:
- * {@code sub} (company_user_id), {@code tid} (tenant_id),
- * {@code slug} (tenant_slug), {@code role}, {@code scope=COMPANY},
- * {@code iat}, {@code exp}, {@code iss}, {@code aud}.</li>
- * <li>Platform access token claims:
- * {@code sub} (platform_user_id), {@code role},
- * {@code scope=PLATFORM}, {@code iat}, {@code exp}, {@code iss},
- * {@code aud}. No {@code tid} / {@code slug} (platform users are
- * cross-tenant).</li>
+ * <li>Company access token claims: sub (company_user_id), tid (tenant_id),
+ * slug (tenant_slug), role, scope=COMPANY, iat, exp, iss, aud.</li>
+ * <li>Platform access token claims: sub (platform_user_id), role,
+ * scope=PLATFORM, iat, exp, iss, aud. No tid / slug (platform users
+ * are cross-tenant).</li>
  * </ul>
  *
- * <p>Algorithm: HS256. The secret is loaded from
- * {@code app.jwt.secret} as a base64-encoded byte array of at least
- *256 bits (32 bytes). At startup a shorter key triggers
+ * <p>Algorithm: HS256. The secret is loaded from app.jwt.secret as a
+ * base64-encoded string; we decode it to bytes and require at least
+ * 256 bits (32 bytes). At startup a shorter key triggers
  * {@link IllegalStateException} so the operator notices immediately.
  */
 @Service
@@ -43,16 +40,36 @@ public class JwtService {
     private final String audience;
 
     public JwtService(JwtProperties props) {
-        byte[] keyBytes = props.secret();
+        byte[] keyBytes = decodeSecret(props.secret());
         if (keyBytes == null || keyBytes.length < 32) {
             throw new IllegalStateException(
-                    "app.jwt.secret must be base64-encoded and at least256 bits (32 bytes) long. Got "
+                    "app.jwt.secret must be base64 encoded and at least 256 bits (32 bytes) long. Got "
                             + (keyBytes == null ? 0 : keyBytes.length) + " bytes.");
         }
         this.signingKey = Keys.hmacShaKeyFor(keyBytes);
         this.accessTtl = props.accessTokenTtl();
         this.issuer = props.issuer();
         this.audience = props.audience();
+    }
+
+    /**
+     * Decode the base64 encoded HMAC secret. Returns null if the raw
+     * value is missing or empty; the caller validates length.
+     */
+    private static byte[] decodeSecret(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            return Base64.getDecoder().decode(raw);
+        } catch (IllegalArgumentException ex) {
+            // Surface a clearer message at startup; the IllegalStateException
+            // thrown by the constructor is more diagnostic than Spring's
+            // generic bind error.
+            throw new IllegalStateException(
+                    "app.jwt.secret is not valid base64. Check the value in application.yml or the JWT_SECRET env var.",
+                    ex);
+        }
     }
 
     /** Issues a company-scope access token. */
@@ -92,10 +109,9 @@ public class JwtService {
     }
 
     /**
-     * Parses and verifies the token, returning the typed claims.
-     * Throws {@link io.jsonwebtoken.JwtException} on any problem
-     * (bad signature, expired, malformed). Callers map to the
-     * appropriate {@code ErrorCode}.
+     * Parses and verifies the token, returning the typed claims. Throws
+     * {@link io.jsonwebtoken.JwtException} on any problem (bad signature,
+     * expired, malformed). Callers map to the appropriate {@code ErrorCode}.
      */
     public ParsedToken parseAndVerify(String token) {
         Claims c = Jwts.parser()
@@ -125,9 +141,8 @@ public class JwtService {
 
     /**
      * Typed projection of the relevant claims. The raw {@code Claims}
-     * object is intentionally not exposed — callers see a stable
-     * record shape and cannot accidentally leak a verification
-     * artifact.
+     * object is intentionally not exposed; callers see a stable record
+     * shape and cannot accidentally leak a verification artifact.
      */
     public record ParsedToken(
             UUID subject,

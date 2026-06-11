@@ -15,12 +15,12 @@ import ar.com.logistics.common.validation.CuitValidator;
 import ar.com.logistics.common.validation.PasswordValidator;
 import ar.com.logistics.common.validation.SlugValidator;
 import ar.com.logistics.common.validation.UsernameValidator;
+import ar.com.logistics.platform.repository.TenantAdminRepository;
 import ar.com.logistics.tenant.domain.Tenant;
 import ar.com.logistics.tenant.dto.CuitAvailabilityResponse;
 import ar.com.logistics.tenant.dto.SlugAvailabilityResponse;
 import ar.com.logistics.tenant.dto.UsernameAvailabilityResponse;
 import ar.com.logistics.tenant.repository.TenantRepository;
-import ar.com.logistics.tenant.repository.admin.TenantAdminRepository;
 import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -253,7 +253,7 @@ public class RegistrationService {
      */
     public UsernameAvailabilityResponse checkUsernameAvailability(String slug, String username) {
         // 1. Tenant must exist
-        var tenant = tenantRepository.findBySlug(slug);
+        var tenant = tenantAdminRepository.findBySlug(slug);
         if (tenant.isEmpty()) {
             return UsernameAvailabilityResponse.unavailable(slug, username, "SLUG_NOT_FOUND");
         }

@@ -8,8 +8,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
@@ -25,6 +25,7 @@ import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
@@ -33,8 +34,8 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * PR3 — End-to-end integration test for the tenant-registration
@@ -66,7 +67,16 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * </ol>
  */
 @Testcontainers
-@SpringBootTest
+@SpringBootTest(
+        properties = {
+            // Disable Spring Boot's Flyway auto-config: with three
+            // DataSources present, the autoconfig cannot decide which
+            // one to bind to. We run Flyway manually in the @BeforeAll
+            // (the same pattern RlsIntegrationIT uses) so the schema is
+            // in place before Spring's EMF beans are wired.
+            "spring.flyway.enabled=false"
+        })
+@AutoConfigureMockMvc
 @ActiveProfiles("test")
 @TestMethodOrder(org.junit.jupiter.api.MethodOrderer.OrderAnnotation.class)
 class RegistrationIT {
@@ -76,7 +86,6 @@ class RegistrationIT {
     private static final String POSTGRES_USER = "postgres";
     private static final String POSTGRES_PASS = "postgres";
 
-    @Container
     @SuppressWarnings("resource")
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(POSTGRES_IMAGE)
             .withDatabaseName(POSTGRES_DB)
@@ -115,16 +124,51 @@ class RegistrationIT {
 
     private JdbcTemplate systemJdbc;
 
-    @BeforeAll
-    static void start() {
-        POSTGRES.start();
-    }
-
     @AfterAll
     static void stop() {
         if (POSTGRES.isRunning()) {
             POSTGRES.stop();
         }
+    }
+
+    /**
+     * Start the Testcontainers Postgres and create the three application
+     * roles with the same passwords the test properties point at. Runs
+     * BEFORE Flyway because V8's {@code GRANT}s target these roles by
+     * name. Mirrors the init block in {@code RlsIntegrationIT} so the
+     * two test suites share the same role-credential convention.
+     *
+     * <p>JUnit 5 does not guarantee the execution order of multiple
+     * {@code @BeforeAll} methods, so the start + role-create steps are
+     * kept together in a single method.
+     */
+    @BeforeAll
+    static void bootstrap() throws Exception {
+        POSTGRES.start();
+        try (Connection conn = DriverManager.getConnection(
+                        POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+                Statement st = conn.createStatement()) {
+            st.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto");
+            st.execute("CREATE ROLE app_user NOINHERIT LOGIN PASSWORD 'app_user'");
+            st.execute("CREATE ROLE app_admin NOINHERIT BYPASSRLS LOGIN PASSWORD 'app_admin'");
+            st.execute("CREATE ROLE app_platform NOINHERIT LOGIN PASSWORD 'app_platform'");
+            st.execute("GRANT CONNECT ON DATABASE " + POSTGRES.getDatabaseName()
+                    + " TO app_user, app_admin, app_platform");
+        }
+
+        // Run Flyway migrations against the freshly-bootstrapped DB.
+        // Spring Boot's auto-Flyway is disabled above (see the
+        // spring.flyway.enabled=false property on @SpringBootTest)
+        // because with three DataSources the autoconfig cannot
+        // pick one to migrate. Doing it explicitly here mirrors
+        // the pattern in RlsIntegrationIT and keeps the schema in
+        // place before Spring's EMF beans try to validate it.
+        org.flywaydb.core.Flyway flyway = org.flywaydb.core.Flyway.configure()
+                .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
+                .locations("classpath:db/migration")
+                .baselineOnMigrate(true)
+                .load();
+        flyway.migrate();
     }
 
     @org.junit.jupiter.api.BeforeEach
@@ -141,7 +185,7 @@ class RegistrationIT {
     @DisplayName("Happy path: 201 with the canonical response, tenant + user persisted, token + audit written")
     void register_happy_path_returns_201_and_persists_everything() throws Exception {
         Map<String, Object> req =
-                buildRegisterRequest("mvr", "30-71234567-8", "admin", "admin@mvr.test", "Passw0rdSegura!");
+                buildRegisterRequest("mvr", "30-71234567-1", "admin", "admin@mvr.test", "Passw0rdSegura!");
 
         MvcResult result = mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -152,7 +196,7 @@ class RegistrationIT {
                 .andExpect(jsonPath("$.tenantId").exists())
                 .andExpect(jsonPath("$.slug").value("mvr"))
                 .andExpect(jsonPath("$.legalName").value("MVR S.A."))
-                .andExpect(jsonPath("$.cuit").value("30712345678"))
+                .andExpect(jsonPath("$.cuit").value("30712345671"))
                 .andExpect(jsonPath("$.userId").exists())
                 .andExpect(jsonPath("$.username").value("admin"))
                 .andExpect(jsonPath("$.email").value("admin@mvr.test"))
@@ -199,7 +243,7 @@ class RegistrationIT {
     void register_duplicate_slug_returns_409() throws Exception {
         // Seed the first registration
         Map<String, Object> first =
-                buildRegisterRequest("dup", "30-71234567-8", "first", "first@dup.test", "Passw0rdSegura!");
+                buildRegisterRequest("dup", "30-71234568-9", "first", "first@dup.test", "Passw0rdSegura!");
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(first)))
@@ -221,14 +265,14 @@ class RegistrationIT {
     @DisplayName("409 CUIT_ALREADY_REGISTERED when the same CUIT is reused with a different slug")
     void register_duplicate_cuit_returns_409() throws Exception {
         Map<String, Object> first =
-                buildRegisterRequest("cuit1", "30-71234567-8", "u1", "u1@cuit.test", "Passw0rdSegura!");
+                buildRegisterRequest("cuit1", "30-71234569-8", "user1", "u1@cuit.test", "Passw0rdSegura!");
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(first)))
                 .andExpect(status().isCreated());
 
         Map<String, Object> second =
-                buildRegisterRequest("cuit2", "30-71234567-8", "u2", "u2@cuit.test", "Passw0rdSegura!");
+                buildRegisterRequest("cuit2", "30-71234569-8", "user2", "u2@cuit.test", "Passw0rdSegura!");
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(second)))
@@ -242,7 +286,7 @@ class RegistrationIT {
     @DisplayName("409 RESERVED_SLUG when the slug is in the reserved catalog")
     void register_reserved_slug_returns_409() throws Exception {
         Map<String, Object> req =
-                buildRegisterRequest("admin", "30-71234567-8", "adminu", "adminu@res.test", "Passw0rdSegura!");
+                buildRegisterRequest("admin", "30-71234570-1", "adminu", "adminu@res.test", "Passw0rdSegura!");
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
@@ -268,7 +312,7 @@ class RegistrationIT {
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
-                .andExpect(jsonPath("$.error.details.cuit").exists());
+                .andExpect(jsonPath("$.error.details.['company.cuit']").exists());
     }
 
     @Test
@@ -291,7 +335,7 @@ class RegistrationIT {
     @DisplayName("400 VALIDATION_ERROR when slug is too short (1 char)")
     void register_short_slug_returns_400() throws Exception {
         Map<String, Object> req =
-                buildRegisterRequest("m", "30-71234567-8", "adminu", "adminu@v.test", "Passw0rdSegura!");
+                buildRegisterRequest("m", "30-71234571-9", "adminu", "adminu@v.test", "Passw0rdSegura!");
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
@@ -304,7 +348,7 @@ class RegistrationIT {
     @DisplayName("400 VALIDATION_ERROR when slug has an uppercase letter")
     void register_uppercase_slug_returns_400() throws Exception {
         Map<String, Object> req =
-                buildRegisterRequest("MVR", "30-71234567-8", "adminu", "adminu@v.test", "Passw0rdSegura!");
+                buildRegisterRequest("MVR", "30-71234572-8", "adminu", "adminu@v.test", "Passw0rdSegura!");
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
@@ -317,7 +361,7 @@ class RegistrationIT {
     @DisplayName("400 VALIDATION_ERROR when password is missing the digit class")
     void register_password_without_digit_returns_400() throws Exception {
         Map<String, Object> req =
-                buildRegisterRequest("mvr3", "30-71234567-8", "adminu", "adminu@v.test", "OnlyLetters!");
+                buildRegisterRequest("mvr3", "30-71234573-6", "adminu", "adminu@v.test", "OnlyLetters!");
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
@@ -335,7 +379,7 @@ class RegistrationIT {
     @DisplayName("A newly registered tenant is visible cross-tenant via systemDataSource (login lookup precondition)")
     void new_tenant_is_visible_via_system_pool() throws Exception {
         Map<String, Object> req =
-                buildRegisterRequest("xvsl", "30-71234567-8", "xvadmin", "xv@x.test", "Passw0rdSegura!");
+                buildRegisterRequest("xvsl", "30-71234574-4", "xvadmin", "xv@x.test", "Passw0rdSegura!");
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
