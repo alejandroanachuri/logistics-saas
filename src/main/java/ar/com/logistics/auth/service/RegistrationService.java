@@ -4,8 +4,8 @@ import ar.com.logistics.auth.domain.CompanyUser;
 import ar.com.logistics.auth.domain.Role;
 import ar.com.logistics.auth.dto.RegisterRequest;
 import ar.com.logistics.auth.dto.RegisterResponse;
-import ar.com.logistics.auth.repository.CompanyUserRepository;
-import ar.com.logistics.auth.repository.RoleRepository;
+import ar.com.logistics.auth.repository.system.CompanyUserAdminRepository;
+import ar.com.logistics.auth.repository.system.RoleRepository;
 import ar.com.logistics.common.audit.AuditEvent;
 import ar.com.logistics.common.audit.AuditLogger;
 import ar.com.logistics.common.exception.ErrorCode;
@@ -61,7 +61,7 @@ public class RegistrationService {
 
     private final TenantAdminRepository tenantAdminRepository;
     private final TenantRepository tenantRepository;
-    private final CompanyUserRepository companyUserRepository;
+    private final CompanyUserAdminRepository companyUserAdminRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditLogger auditLogger;
@@ -69,13 +69,13 @@ public class RegistrationService {
     public RegistrationService(
             TenantAdminRepository tenantAdminRepository,
             TenantRepository tenantRepository,
-            CompanyUserRepository companyUserRepository,
+            CompanyUserAdminRepository companyUserAdminRepository,
             RoleRepository roleRepository,
             PasswordEncoder passwordEncoder,
             AuditLogger auditLogger) {
         this.tenantAdminRepository = tenantAdminRepository;
         this.tenantRepository = tenantRepository;
-        this.companyUserRepository = companyUserRepository;
+        this.companyUserAdminRepository = companyUserAdminRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.auditLogger = auditLogger;
@@ -158,13 +158,13 @@ public class RegistrationService {
         tenant = tenantAdminRepository.save(tenant);
 
         // 8. Defensive double-check (tenant is fresh; should always be empty)
-        if (companyUserRepository.existsByTenantIdAndUsername(tenant.getId(), username)) {
+        if (companyUserAdminRepository.existsByTenantIdAndUsername(tenant.getId(), username)) {
             // Should be impossible because the tenant just got its id,
             // but the unique constraint is a stronger guarantee.
             throw new ResourceConflictException(
                     ErrorCode.USERNAME_ALREADY_TAKEN, Map.of("username", "username is already in use"));
         }
-        if (companyUserRepository.existsByTenantIdAndEmail(
+        if (companyUserAdminRepository.existsByTenantIdAndEmail(
                 tenant.getId(), req.admin().email())) {
             throw new ResourceConflictException(
                     ErrorCode.EMAIL_ALREADY_TAKEN, Map.of("email", "email is already in use"));
@@ -179,7 +179,7 @@ public class RegistrationService {
                 req.admin().firstName(),
                 req.admin().lastName());
         user.setPasswordHash(passwordEncoder.encode(req.admin().password()));
-        user = companyUserRepository.save(user);
+        user = companyUserAdminRepository.save(user);
 
         // 10. Audit
         auditLogger.logAsync(new AuditEvent(
@@ -265,7 +265,7 @@ public class RegistrationService {
         }
 
         // 3. Per-tenant uniqueness (case-insensitive per spec)
-        boolean taken = companyUserRepository.existsByTenantIdAndUsername(tenantId, username.toLowerCase());
+        boolean taken = companyUserAdminRepository.existsByTenantIdAndUsername(tenantId, username.toLowerCase());
         // Note: the database stores usernames in their original
         // case (the spec says username is lowercase, but the
         // repository check is exact-match. The username validator

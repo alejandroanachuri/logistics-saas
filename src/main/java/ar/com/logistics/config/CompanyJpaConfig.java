@@ -40,7 +40,7 @@ import org.springframework.transaction.PlatformTransactionManager;
  */
 @Configuration(proxyBeanMethods = false)
 @EnableJpaRepositories(
-        basePackages = {"ar.com.logistics.tenant.repository", "ar.com.logistics.auth.repository"},
+        basePackages = {"ar.com.logistics.tenant.repository", "ar.com.logistics.auth.repository.company"},
         entityManagerFactoryRef = "companyEntityManagerFactory",
         transactionManagerRef = "companyTransactionManager")
 public class CompanyJpaConfig {

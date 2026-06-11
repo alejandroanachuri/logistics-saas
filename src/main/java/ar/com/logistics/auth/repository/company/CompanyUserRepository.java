@@ -1,4 +1,4 @@
-package ar.com.logistics.auth.repository;
+package ar.com.logistics.auth.repository.company;
 
 import ar.com.logistics.auth.domain.CompanyUser;
 import java.util.Optional;
@@ -7,13 +7,16 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 /**
- * Company-user repository. The same interface is bound to BOTH
- * the {@code companyDataSource} EMF (for post-login queries
- * filtered by RLS) and the {@code systemDataSource} EMF (for the
- * registration write path and the per-tenant uniqueness
- * pre-checks). Each {@code @EnableJpaRepositories} declares this
- * package in its {@code basePackages}, so the JPA infrastructure
- * creates a separate repository proxy for each EMF.
+ * Company-side company-user repository. Bound to the
+ * {@code companyDataSource} EMF by
+ * {@link ar.com.logistics.config.CompanyJpaConfig}. The split
+ * from {@code auth.repository.system.CompanyUserAdminRepository}
+ * exists so the per-DataSource
+ * {@code @EnableJpaRepositories(basePackages=...)} lists are
+ * disjoint (otherwise the same interface class is registered
+ * twice in two different persistence units and the Spring
+ * context fails to start with
+ * {@code BeanDefinitionOverrideException}).
  */
 @Repository
 public interface CompanyUserRepository extends JpaRepository<CompanyUser, UUID> {
