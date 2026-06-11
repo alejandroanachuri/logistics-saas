@@ -1,0 +1,16 @@
+# Test profile overrides for the application configuration.
+# Loaded by Spring's test framework when @ActiveProfiles("test")
+# is on the test class (RegistrationIT, LoginFlowIT, DswiringIT).
+
+app:
+  rate-limit:
+    # Disable the Bucket4j filter in tests so the 16-scenario
+    # RegistrationIT can run without hitting the 5/h budget. The
+    # RateLimitIT itself exercises the buckets in isolation and
+    # does NOT load the Spring context, so it is unaffected.
+    enabled: false
+  email:
+    # NoOp implementation already activates when app.email.enabled
+    # is false (which is the default), but make it explicit for
+    # the test profile.
+    enabled: false

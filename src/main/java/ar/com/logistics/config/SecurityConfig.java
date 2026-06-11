@@ -2,6 +2,9 @@ package ar.com.logistics.config;
 
 import ar.com.logistics.auth.jwt.JwtProperties;
 import ar.com.logistics.common.cookie.CookieWriter;
+import ar.com.logistics.common.ratelimit.RateLimitFilter;
+import ar.com.logistics.common.ratelimit.RateLimitProperties;
+import ar.com.logistics.common.security.SecurityHeadersFilter;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -41,11 +44,19 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Configuration
 @EnableWebSecurity
 @EnableAsync
-@EnableConfigurationProperties({JwtProperties.class, CookieWriter.CookieProperties.class})
+@EnableConfigurationProperties({JwtProperties.class, CookieWriter.CookieProperties.class, RateLimitProperties.class})
 public class SecurityConfig {
 
     /** BCrypt strength12 per design §7 (matches PRD line856). */
     private static final int BCRYPT_STRENGTH = 12;
+
+    private final SecurityHeadersFilter securityHeadersFilter;
+    private final RateLimitFilter rateLimitFilter;
+
+    public SecurityConfig(SecurityHeadersFilter securityHeadersFilter, RateLimitFilter rateLimitFilter) {
+        this.securityHeadersFilter = securityHeadersFilter;
+        this.rateLimitFilter = rateLimitFilter;
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -54,7 +65,21 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.csrf(csrf -> csrf.disable())
+        // The order matters here:
+        //   1. SecurityHeadersFilter — adds the four baseline security
+        //      headers to every response, including 401s.
+        //   2. RateLimitFilter — Bucket4j on the anonymous endpoints
+        //      (register, login, availability). Sits BEFORE the
+        //      authentication filter so abusive traffic is dropped
+        //      before reaching the auth code.
+        //   3. (Authentication filter lands in a follow-up PR.)
+        http.addFilterBefore(
+                        securityHeadersFilter,
+                        org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(
+                        rateLimitFilter,
+                        org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
+                .csrf(csrf -> csrf.disable())
                 .httpBasic(basic -> basic.disable())
                 .formLogin(form -> form.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
