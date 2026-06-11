@@ -49,4 +49,24 @@ public class RefreshToken extends BaseEntity {
         COMPANY,
         PLATFORM
     }
+
+    /**
+     * Setter for {@code revokedAt}. Set by
+     * {@code RefreshTokenService.revoke} and
+     * {@code RefreshTokenService.handleReuse}. The entity is
+     * otherwise immutable to outside layers; only the refresh
+     * service mutates it.
+     */
+    public void setRevokedAt(Instant revokedAt) {
+        this.revokedAt = revokedAt;
+    }
+
+    /**
+     * Setter for {@code replacedBy}. Set by
+     * {@code RefreshTokenService.validateAndRotate} when the
+     * token is rotated.
+     */
+    public void setReplacedBy(UUID replacedBy) {
+        this.replacedBy = replacedBy;
+    }
 }

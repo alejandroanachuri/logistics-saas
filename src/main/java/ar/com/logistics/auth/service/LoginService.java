@@ -73,6 +73,7 @@ public class LoginService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuditLogger auditLogger;
+    private final RefreshTokenService refreshTokenService;
 
     public LoginService(
             TenantAdminRepository tenantAdminRepository,
@@ -80,13 +81,15 @@ public class LoginService {
             RoleRepository roleRepository,
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
-            AuditLogger auditLogger) {
+            AuditLogger auditLogger,
+            RefreshTokenService refreshTokenService) {
         this.tenantAdminRepository = tenantAdminRepository;
         this.userAdminRepository = userAdminRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.auditLogger = auditLogger;
+        this.refreshTokenService = refreshTokenService;
     }
 
     /**
@@ -196,10 +199,20 @@ public class LoginService {
                 null,
                 Map.of("loginSlug", tenant.getSlug())));
 
-        // 10. Build the result. refreshTokenId / refreshTokenValue
-        //     are placeholders for PR4b — the controller in this
-        //     PR4a slice will NOT write a refresh cookie.
-        return new LoginResult(accessToken, null, null, null, user, tenant, role, ACCESS_TTL_SECONDS);
+        // 10. Issue a refresh token row. The controller will
+        //     write the raw UUID to the refresh_token cookie
+        //     and the row itself carries the BCrypt hash.
+        RefreshTokenService.Issued refresh = refreshTokenService.issue(user, tenant, role);
+
+        return new LoginResult(
+                accessToken,
+                refresh.refreshTokenId(),
+                refresh.refreshTokenValue(),
+                refresh.refreshTokenExpiresAt(),
+                user,
+                tenant,
+                role,
+                ACCESS_TTL_SECONDS);
     }
 
     private static AuditEvent loginFailure(UUID tenantId, String slug, String username, String reason) {

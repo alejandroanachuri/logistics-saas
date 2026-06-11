@@ -5,8 +5,10 @@ import ar.com.logistics.auth.dto.LoginResponse;
 import ar.com.logistics.auth.dto.RegisterRequest;
 import ar.com.logistics.auth.dto.RegisterResponse;
 import ar.com.logistics.auth.service.LoginService;
+import ar.com.logistics.auth.service.RefreshTokenService;
 import ar.com.logistics.auth.service.RegistrationService;
 import ar.com.logistics.common.cookie.CookieWriter;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import java.time.Duration;
@@ -19,28 +21,35 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Auth endpoints under {@code /api/v1/auth}. PR3 added the
- * self-service registration endpoint; PR4a adds the company-user
- * login endpoint. Refresh, logout, and {@code /auth/me} land in
- * PR4b/c.
+ * self-service registration endpoint; PR4a added the company-user
+ * login endpoint; PR4b adds the refresh rotation endpoint and
+ * the logout endpoint. {@code /auth/me} lands in PR4c.
  *
  * <p>All routes here are declared {@code permitAll()} in
- * {@link ar.com.logistics.config.SecurityConfig} (registration and
- * login are anonymous).
+ * {@link ar.com.logistics.config.SecurityConfig}.
  */
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 
     private static final Duration ACCESS_TOKEN_TTL = Duration.ofSeconds(900);
+    private static final Duration REFRESH_TOKEN_TTL = Duration.ofDays(7);
+
+    private static final String REFRESH_COOKIE_NAME = "refresh_token";
 
     private final RegistrationService registrationService;
     private final LoginService loginService;
+    private final RefreshTokenService refreshTokenService;
     private final CookieWriter cookieWriter;
 
     public AuthController(
-            RegistrationService registrationService, LoginService loginService, CookieWriter cookieWriter) {
+            RegistrationService registrationService,
+            LoginService loginService,
+            RefreshTokenService refreshTokenService,
+            CookieWriter cookieWriter) {
         this.registrationService = registrationService;
         this.loginService = loginService;
+        this.refreshTokenService = refreshTokenService;
         this.cookieWriter = cookieWriter;
     }
 
@@ -60,34 +69,98 @@ public class AuthController {
     /**
      * Company-user login. Validates the {@code (slug, username,
      * password)} triple, issues a fresh JWT {@code access_token}
-     * cookie, and returns the user projection + {@code expiresIn}
-     * in the body.
-     *
-     * <p>PR4a only writes the access_token cookie. The refresh
-     * cookie lands in PR4b along with the {@code refresh_tokens}
-     * row insertion.
+     * cookie + a new opaque {@code refresh_token} cookie (BCrypt
+     * hashed at rest), and returns the user projection +
+     * {@code expiresIn} in the body.
      */
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest req, HttpServletResponse httpResponse) {
         LoginService.LoginResult result = loginService.login(req.slug(), req.username(), req.password());
 
-        // Write the access_token cookie. SameSite=Strict, HttpOnly,
-        // Path=/api/v1, Max-Age=900 (15 min, per spec).
         cookieWriter.writeAccessToken(httpResponse, CookieWriter.COMPANY, result.accessToken(), ACCESS_TOKEN_TTL);
+        cookieWriter.writeRefreshToken(
+                httpResponse, CookieWriter.COMPANY, result.refreshTokenValue().toString(), REFRESH_TOKEN_TTL);
 
-        LoginResponse body = new LoginResponse(
+        return ResponseEntity.ok(buildLoginResponse(result));
+    }
+
+    /**
+     * Refresh rotation. Reads the {@code refresh_token} cookie,
+     * validates it via {@link RefreshTokenService#validateAndRotate},
+     * and writes fresh {@code access_token} + {@code refresh_token}
+     * cookies. The body shape is the same as {@code /login}.
+     */
+    @PostMapping("/refresh")
+    public ResponseEntity<LoginResponse> refresh(HttpServletRequest request, HttpServletResponse response) {
+        String rawCookie = extractRefreshCookie(request);
+        RefreshTokenService.Refreshed r = refreshTokenService.validateAndRotate(rawCookie);
+
+        cookieWriter.writeAccessToken(response, CookieWriter.COMPANY, r.accessToken(), ACCESS_TOKEN_TTL);
+        cookieWriter.writeRefreshToken(
+                response, CookieWriter.COMPANY, r.newRefreshTokenValue().toString(), REFRESH_TOKEN_TTL);
+
+        // Reuse the LoginResponse shape so the frontend can treat
+        // /login and /refresh the same.
+        LoginService.LoginResult loginResult = new LoginService.LoginResult(
+                r.accessToken(),
+                null,
+                r.newRefreshTokenValue(),
+                r.newRefreshTokenExpiresAt(),
+                r.user(),
+                r.tenant(),
+                r.role(),
+                r.accessTokenExpiresIn());
+        return ResponseEntity.ok(buildLoginResponse(loginResult));
+    }
+
+    /**
+     * Logout. Revokes the presented refresh token (idempotent) and
+     * clears both cookies. Returns {@code 204 No Content} on
+     * success. A missing or unknown refresh token is still 204 —
+     * the user is logged out either way.
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(HttpServletRequest request, HttpServletResponse response) {
+        String rawCookie = extractRefreshCookie(request);
+        refreshTokenService.revoke(rawCookie);
+        cookieWriter.clearAccessToken(response, CookieWriter.COMPANY);
+        cookieWriter.clearRefreshToken(response, CookieWriter.COMPANY);
+        return ResponseEntity.noContent().build();
+    }
+
+    // -------------------------------------------------------------------
+    //  Helpers
+    // -------------------------------------------------------------------
+
+    private static String extractRefreshCookie(HttpServletRequest request) {
+        // Cookies are accessed via the Cookie header; in Spring
+        // the Cookie API is request.getCookies() but a value lookup
+        // by name keeps the path-scoping explicit.
+        jakarta.servlet.http.Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
+            return null;
+        }
+        for (jakarta.servlet.http.Cookie c : cookies) {
+            if (REFRESH_COOKIE_NAME.equals(c.getName())) {
+                return c.getValue();
+            }
+        }
+        return null;
+    }
+
+    private static LoginResponse buildLoginResponse(LoginService.LoginResult r) {
+        return new LoginResponse(
                 new LoginResponse.User(
-                        result.user().getId(),
-                        result.tenant().getId(),
-                        result.tenant().getSlug(),
-                        result.user().getUsername(),
-                        result.user().getEmail(),
-                        result.user().getFirstName(),
-                        result.user().getLastName(),
-                        result.role().getName(),
+                        r.user().getId(),
+                        r.tenant().getId(),
+                        r.tenant().getSlug(),
+                        r.user().getUsername(),
+                        r.user().getEmail(),
+                        r.user().getFirstName(),
+                        r.user().getLastName(),
+                        r.role().getName(),
                         "COMPANY",
-                        result.user().isEmailVerified()),
-                result.expiresIn());
-        return ResponseEntity.ok(body);
+                        r.user().isEmailVerified()),
+                r.expiresIn());
     }
 }
