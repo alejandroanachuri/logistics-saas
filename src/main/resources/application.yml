@@ -52,19 +52,19 @@ spring:
     validate-on-migrate: true
 
   # ----- Jackson -----
-  # NOTE: Spring Boot 4 ships Jackson 3.x (package tools.jackson.databind)
-  # which uses UPPER_CASE enum names and the default behaviour already
-  # writes dates as ISO-8601 strings — the WRITE_DATES_AS_TIMESTAMPS
-  # feature in Jackson 2 does not exist. Keep the block minimal.
-  jackson:
-    deserialization:
-      fail-on-unknown-properties: false
-      default-property-inclusion: non_null
+  # Jackson 3 (package tools.jackson.databind) is the default in
+  # Spring Boot 4. Defaults are sensible for our use case (UPPER_CASE
+  # enum names, ISO-8601 dates). No custom config needed for v1.
+  # If we need a customisation later, use spring.jackson3.* (NOT
+  # spring.jackson.*, which Boot 4 reserves for the Jackson 2
+  # compatibility layer that we do NOT have on the classpath).
 
   # ----- MVC -----
   mvc:
     problemdetails:
-      enabled: false # we use our own error envelope (PR2)
+      # We use our own error envelope (PR2); Spring's
+      # ProblemDetail is not part of the wire contract.
+      enabled: false
 
 server:
   port: 8080
@@ -165,12 +165,12 @@ app:
         idle-timeout: 600000
         max-lifetime: 1800000
 
-  # ----- JPA per-pool (none of the three inherit the global
-  # spring.jpa.* defaults because spring-boot auto-config only
-  # wires a single EMF; our three @Configuration classes bind
-  # their own JpaProperties beans via the @ConfigurationProperties
-  # prefix below). Kept as documentation; tuning lives in
-  # application-dev.yml / application-prod.yml. -----
+  # ----- JPA per-pool -----
+  # None of the three inherit the global spring.jpa.* defaults
+  # because spring-boot auto-config only wires a single EMF; our
+  # three @Configuration classes bind their own JpaProperties beans
+  # via the @ConfigurationProperties prefix below. Tuning lives in
+  # application-dev.yml / application-prod.yml.
   jpa:
     company:
       open-in-view: false
