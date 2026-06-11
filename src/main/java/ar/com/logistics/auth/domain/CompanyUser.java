@@ -74,4 +74,29 @@ public class CompanyUser extends BaseEntity {
         ACTIVE,
         DISABLED
     }
+
+    /**
+     * Static factory used by the registration service to create a
+     * fresh first-admin user. Sets the {@code id}, leaves the audit
+     * timestamps to {@link BaseEntity}'s {@code @PrePersist}
+     * hook, and pre-populates the verification token + 24-hour
+     * expiry. The {@code passwordHash} is set by the service
+     * after BCrypt encoding.
+     */
+    public static CompanyUser create(
+            UUID tenantId, UUID roleId, String username, String email, String firstName, String lastName) {
+        CompanyUser u = new CompanyUser();
+        u.id = UUID.randomUUID();
+        u.tenantId = tenantId;
+        u.roleId = roleId;
+        u.username = username;
+        u.email = email;
+        u.firstName = firstName;
+        u.lastName = lastName;
+        u.emailVerified = false;
+        u.status = UserStatus.PENDING_VERIFICATION;
+        u.verificationToken = UUID.randomUUID();
+        u.verificationTokenExpiresAt = java.time.Instant.now().plus(java.time.Duration.ofHours(24));
+        return u;
+    }
 }

@@ -92,4 +92,41 @@ public class Tenant extends BaseEntity {
         t.status = TenantStatus.ACTIVE;
         return t;
     }
+
+    /**
+     * Static factory with the full set of fields the registration
+     * service needs. The address fields are stored as individual
+     * columns (V1) so we set them all here and let the
+     * {@code @PrePersist} on {@link ar.com.logistics.shared.BaseEntity}
+     * stamp the audit columns.
+     */
+    public static Tenant create(
+            String slug,
+            String legalName,
+            String commercialName,
+            String cuit,
+            TaxType taxType,
+            String contactEmail,
+            String contactPhone,
+            String country,
+            String province,
+            String city,
+            String addressLine,
+            String addressNumber,
+            String addressFloor,
+            String addressApartment,
+            String postalCode) {
+        Tenant t = create(slug, legalName, cuit, taxType, contactEmail);
+        t.commercialName = commercialName;
+        t.contactPhone = contactPhone;
+        t.country = country == null ? "AR" : country;
+        t.province = province;
+        t.city = city;
+        t.addressLine = addressLine;
+        t.addressNumber = addressNumber;
+        t.addressFloor = addressFloor;
+        t.addressApartment = addressApartment;
+        t.postalCode = postalCode;
+        return t;
+    }
 }
