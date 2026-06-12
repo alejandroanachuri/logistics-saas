@@ -29,10 +29,20 @@ export interface ApiErrorEnvelope {
  * server response and attaches the parsed envelope at
  * {@code error} so call sites can do
  * {@code (err.error as ApiErrorEnvelope).error.code}.
+ *
+ * <p>{@code headers} is optional because v1 of the
+ * {@code errorInterceptor} does not yet project response
+ * headers onto the rethrown error. Call sites that need
+ * response headers (e.g. {@code LoginService} reading
+ * {@code Retry-After} for {@code ACCOUNT_LOCKED} minutes)
+ * type-narrow with a {@code { get(k): string | null } }
+ * minimal contract; a future PR will surface the full
+ * {@code HttpHeaders} from the interceptor.
  */
 export interface ApiHttpError {
   status: number;
   statusText: string;
   url?: string;
   error: ApiErrorEnvelope | { code: 'NETWORK_ERROR'; message: string };
+  headers?: { get(name: string): string | null };
 }
