@@ -1,0 +1,113 @@
+<section class="w-full max-w-2xl" data-testid="admin-step">
+  <h2 class="text-xl font-semibold text-slate-900">Datos del administrador</h2>
+  <p class="mt-1 text-sm text-slate-600">Ingresá los datos de la persona que va a administrar la cuenta.</p>
+
+  <form [formGroup]="form" (ngSubmit)="$event.preventDefault()" novalidate class="mt-6 space-y-6">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div class="space-y-1">
+        <label for="admin-first-name" class="block text-sm font-medium text-slate-700">Nombre</label>
+        <input
+          id="admin-first-name"
+          type="text"
+          formControlName="firstName"
+          autocomplete="given-name"
+          class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+        />
+      </div>
+
+      <div class="space-y-1">
+        <label for="admin-last-name" class="block text-sm font-medium text-slate-700">Apellido</label>
+        <input
+          id="admin-last-name"
+          type="text"
+          formControlName="lastName"
+          autocomplete="family-name"
+          class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+        />
+      </div>
+
+      <div class="space-y-1 sm:col-span-2">
+        <label for="admin-username" class="block text-sm font-medium text-slate-700">Usuario</label>
+        <input
+          id="admin-username"
+          type="text"
+          formControlName="username"
+          autocomplete="username"
+          spellcheck="false"
+          class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+        />
+      </div>
+
+      <div class="space-y-1 sm:col-span-2">
+        <label for="admin-email" class="block text-sm font-medium text-slate-700">Email</label>
+        <input
+          id="admin-email"
+          type="email"
+          formControlName="email"
+          autocomplete="email"
+          class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+        />
+      </div>
+
+      <div class="space-y-1 sm:col-span-2">
+        <label for="admin-password" class="block text-sm font-medium text-slate-700">Contraseña</label>
+        <div class="relative">
+          <input
+            id="admin-password"
+            [type]="isPasswordVisible() ? 'text' : 'password'"
+            formControlName="password"
+            autocomplete="new-password"
+            class="block w-full rounded-md border border-slate-300 px-3 py-2 pr-20 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          />
+          <button
+            type="button"
+            (click)="togglePasswordVisibility()"
+            [attr.aria-label]="isPasswordVisible() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+            [attr.aria-pressed]="isPasswordVisible()"
+            class="absolute inset-y-0 right-0 flex items-center px-3 text-sm font-medium text-slate-600 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-1 rounded-r-md"
+          >
+            {{ isPasswordVisible() ? 'Ocultar' : 'Mostrar' }}
+          </button>
+        </div>
+        <app-password-strength-indicator [password]="form.controls.password.value" />
+      </div>
+
+      <div class="space-y-1 sm:col-span-2">
+        <label for="admin-password-confirmation" class="block text-sm font-medium text-slate-700">Confirmar contraseña</label>
+        <input
+          id="admin-password-confirmation"
+          [type]="isPasswordVisible() ? 'text' : 'password'"
+          formControlName="passwordConfirmation"
+          autocomplete="new-password"
+          class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+        />
+      </div>
+    </div>
+
+    <!--
+      Top-level error region — PR11c Discovery #23 pattern,
+      same as the company step. Always rendered with
+      min-h so the layout does not jump when the copy
+      appears or disappears.
+    -->
+    <div
+      role="status"
+      aria-live="polite"
+      class="min-h-[1.25rem] text-sm text-red-600"
+      data-testid="admin-error"
+    >
+      {{ topLevelError }}
+    </div>
+
+    <div class="flex justify-end">
+      <button
+        type="button"
+        [disabled]="!canAdvance"
+        data-testid="admin-next"
+        class="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300"
+      >
+        Siguiente
+      </button>
+    </div>
+  </form>
+</section>
