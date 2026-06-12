@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { Component, ViewChild } from '@angular/core';
+import { Component } from '@angular/core';
 
 import { PasswordStrengthIndicator, tierFromScore, segmentsFilledFor } from './password-strength-indicator';
 
@@ -19,7 +19,6 @@ import { PasswordStrengthIndicator, tierFromScore, segmentsFilledFor } from './p
 })
 class HostComponent {
   value = '';
-  @ViewChild(PasswordStrengthIndicator) indicator!: PasswordStrengthIndicator;
 }
 
 /**
