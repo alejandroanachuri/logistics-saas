@@ -20,7 +20,7 @@ export const routes: Routes = [
   {
     path: 'login',
     loadComponent: () =>
-      import('./features/login/login-placeholder').then((m) => m.LoginPlaceholderComponent),
+      import('./features/login/login').then((m) => m.LoginComponent),
   },
   {
     path: 'register',
