@@ -11,7 +11,8 @@ import {
   ValidatorFn,
   Validators,
 } from '@angular/forms';
-import { of } from 'rxjs';
+import { Observable, of, timer } from 'rxjs';
+import { catchError, map, switchMap } from 'rxjs/operators';
 
 import { ProvincesService } from '../../../core/services/provinces.service';
 import { AvailabilityService } from '../../../core/services/availability.service';
@@ -90,16 +91,21 @@ export function cuitMod11Validator(): ValidatorFn {
  * <p>The {@code timer(300) + switchMap(...)} is the debounce
  * pattern. Every keystroke restarts the 300ms clock; only
  * the last value reaches the API.
- *
- * <p>PR12b1 commit 2 wires this for real. Commit 1 leaves
- * the form's slug control with a stub that returns
- * {@code of(null)} synchronously so the sync-only spec
- * passes.
  */
 export function slugAvailableAsync(
-  _availability: AvailabilityService,
+  availability: AvailabilityService,
 ): AsyncValidatorFn {
-  return (_control: AbstractControl) => of(null);
+  return (control: AbstractControl): Observable<ValidationErrors | null> => {
+    const value = control.value;
+    if (typeof value !== 'string' || value === '') {
+      return of(null);
+    }
+    return timer(300).pipe(
+      switchMap(() => availability.checkSlug(value)),
+      map((resp) => (resp.available ? null : { slugTaken: true })),
+      catchError(() => of(null)),
+    );
+  };
 }
 
 /**
@@ -108,14 +114,21 @@ export function slugAvailableAsync(
  * reports the CUIT is already registered; {@code null}
  * otherwise. Same debounce plumbing as
  * {@code slugAvailableAsync}.
- *
- * <p>PR12b1 commit 2 wires this for real. Commit 1 leaves
- * the form's CUIT control with a stub.
  */
 export function cuitAvailableAsync(
-  _availability: AvailabilityService,
+  availability: AvailabilityService,
 ): AsyncValidatorFn {
-  return (_control: AbstractControl) => of(null);
+  return (control: AbstractControl): Observable<ValidationErrors | null> => {
+    const value = control.value;
+    if (typeof value !== 'string' || value === '') {
+      return of(null);
+    }
+    return timer(300).pipe(
+      switchMap(() => availability.checkCuit(value)),
+      map((resp) => (resp.available ? null : { cuitTaken: true })),
+      catchError(() => of(null)),
+    );
+  };
 }
 
 /** Typed shape of the step 1 company-data form. */
@@ -156,12 +169,10 @@ export type CompanyFormGroup = FormGroup<{
  * {@code @ViewChild} (PR12c scope).
  *
  * <p>Sync validation matches the backend validators (PR2b1).
- * Async validation (slug + cuit availability) is wired in
- * PR12b1 commit 2 with a 300ms debounce. Commit 1 leaves
- * the async validators as no-op stubs returning
- * {@code of(null)} — the form's
- * {@code form.valid && !form.pending} gating is exercised
- * by the spec in commit 2.
+ * Async validation (slug + cuit availability) is wired with
+ * a 300ms debounce — the form is {@code form.pending}
+ * while the async validators run, which is what the
+ * Siguiente button's {@code canAdvance} gate reads.
  */
 @Component({
   selector: 'app-company-step',
