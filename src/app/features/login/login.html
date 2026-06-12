@@ -30,36 +30,48 @@
 
       <div class="space-y-1">
         <label for="login-password" class="block text-sm font-medium text-slate-700">Contraseña</label>
-        <input
-          id="login-password"
-          type="password"
-          formControlName="password"
-          autocomplete="current-password"
-          class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
-        />
-        <!-- PR11c will add a password show/hide toggle here. -->
+        <div class="relative">
+          <input
+            id="login-password"
+            [type]="isPasswordVisible() ? 'text' : 'password'"
+            formControlName="password"
+            autocomplete="current-password"
+            class="block w-full rounded-md border border-slate-300 px-3 py-2 pr-20 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          />
+          <button
+            type="button"
+            (click)="togglePasswordVisibility()"
+            [attr.aria-label]="isPasswordVisible() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+            [attr.aria-pressed]="isPasswordVisible()"
+            class="absolute inset-y-0 right-0 flex items-center px-3 text-sm font-medium text-slate-600 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-1 rounded-r-md"
+          >
+            {{ isPasswordVisible() ? 'Ocultar' : 'Mostrar' }}
+          </button>
+        </div>
       </div>
 
       <!--
-        PR11c will bind the error copy from
-        LoginService.extractErrorCopy(thrown) into this region.
-        The element must exist in the DOM today (with the
-        aria-live politeness setting) so PR11c only has to set
-        [textContent] — no DOM diff needed.
+        Error region — PR11c binds the message from
+        LoginService.extractErrorCopy(thrown).message into
+        this region. The element must exist in the DOM with
+        the aria-live politeness setting for screen readers
+        to announce the error after a failed submit.
       -->
       <div
         role="status"
         aria-live="polite"
         class="min-h-[1.25rem] text-sm text-red-600"
         data-testid="login-error"
-      ></div>
+      >
+        {{ errorMessage() }}
+      </div>
 
       <button
         type="submit"
         [disabled]="form.invalid || isLoading()"
         class="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300"
       >
-        Ingresar
+        {{ isLoading() ? 'Ingresando...' : 'Ingresar' }}
       </button>
 
       <div class="flex items-center justify-between pt-2">
