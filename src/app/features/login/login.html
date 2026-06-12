@@ -1,0 +1,81 @@
+<main class="w-full max-w-md">
+  <section class="rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
+    <h1 class="text-2xl font-semibold text-slate-900">Iniciar sesión</h1>
+    <p class="mt-2 text-sm text-slate-600">Ingresá con tu slug de empresa, usuario y contraseña.</p>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate class="mt-6 space-y-4">
+      <div class="space-y-1">
+        <label for="login-slug" class="block text-sm font-medium text-slate-700">Slug de la empresa</label>
+        <input
+          id="login-slug"
+          type="text"
+          formControlName="slug"
+          autocomplete="organization"
+          spellcheck="false"
+          class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+        />
+      </div>
+
+      <div class="space-y-1">
+        <label for="login-username" class="block text-sm font-medium text-slate-700">Usuario</label>
+        <input
+          id="login-username"
+          type="text"
+          formControlName="username"
+          autocomplete="username"
+          spellcheck="false"
+          class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+        />
+      </div>
+
+      <div class="space-y-1">
+        <label for="login-password" class="block text-sm font-medium text-slate-700">Contraseña</label>
+        <input
+          id="login-password"
+          type="password"
+          formControlName="password"
+          autocomplete="current-password"
+          class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+        />
+        <!-- PR11c will add a password show/hide toggle here. -->
+      </div>
+
+      <!--
+        PR11c will bind the error copy from
+        LoginService.extractErrorCopy(thrown) into this region.
+        The element must exist in the DOM today (with the
+        aria-live politeness setting) so PR11c only has to set
+        [textContent] — no DOM diff needed.
+      -->
+      <div
+        role="status"
+        aria-live="polite"
+        class="min-h-[1.25rem] text-sm text-red-600"
+        data-testid="login-error"
+      ></div>
+
+      <button
+        type="submit"
+        [disabled]="form.invalid || isLoading()"
+        class="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300"
+      >
+        Ingresar
+      </button>
+
+      <div class="flex items-center justify-between pt-2">
+        <button
+          type="button"
+          disabled
+          title="Próximamente"
+          aria-disabled="true"
+          class="cursor-not-allowed text-sm font-medium text-slate-400"
+        >
+          ¿Olvidaste tu contraseña?
+        </button>
+        <a routerLink="/register" class="text-sm font-medium text-slate-900 hover:underline">
+          Registrate
+        </a>
+      </div>
+    </form>
+  </section>
+</main>
