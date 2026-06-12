@@ -1,0 +1,203 @@
+<section class="w-full max-w-2xl" data-testid="company-step">
+  <h2 class="text-xl font-semibold text-slate-900">Datos de la empresa</h2>
+  <p class="mt-1 text-sm text-slate-600">Empezamos con los datos fiscales y de contacto de tu empresa.</p>
+
+  <form [formGroup]="form" (ngSubmit)="$event.preventDefault()" novalidate class="mt-6 space-y-6">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div class="space-y-1 sm:col-span-2">
+        <label for="company-legal-name" class="block text-sm font-medium text-slate-700">Razón social</label>
+        <input
+          id="company-legal-name"
+          type="text"
+          formControlName="legalName"
+          autocomplete="organization"
+          class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+        />
+      </div>
+
+      <div class="space-y-1 sm:col-span-2">
+        <label for="company-commercial-name" class="block text-sm font-medium text-slate-700">Nombre comercial</label>
+        <input
+          id="company-commercial-name"
+          type="text"
+          formControlName="commercialName"
+          class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+        />
+      </div>
+
+      <div class="space-y-1">
+        <label for="company-cuit" class="block text-sm font-medium text-slate-700">CUIT</label>
+        <input
+          id="company-cuit"
+          type="text"
+          inputmode="numeric"
+          formControlName="cuit"
+          maxlength="11"
+          class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+        />
+      </div>
+
+      <div class="space-y-1">
+        <label for="company-tax-type" class="block text-sm font-medium text-slate-700">Tipo de contribuyente</label>
+        <select
+          id="company-tax-type"
+          formControlName="taxType"
+          data-testid="company-tax-type"
+          class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+        >
+          <option value="RESPONSABLE_INSCRIPTO">Responsable Inscripto</option>
+          <option value="MONOTRIBUTO">Monotributo</option>
+          <option value="EXENTO">Exento</option>
+        </select>
+      </div>
+
+      <div class="space-y-1">
+        <label for="company-slug" class="block text-sm font-medium text-slate-700">Slug</label>
+        <input
+          id="company-slug"
+          type="text"
+          formControlName="slug"
+          spellcheck="false"
+          class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+        />
+      </div>
+
+      <div class="space-y-1">
+        <label for="company-contact-email" class="block text-sm font-medium text-slate-700">Email de contacto</label>
+        <input
+          id="company-contact-email"
+          type="email"
+          formControlName="contactEmail"
+          autocomplete="email"
+          class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+        />
+      </div>
+
+      <div class="space-y-1 sm:col-span-2">
+        <label for="company-contact-phone" class="block text-sm font-medium text-slate-700">Teléfono de contacto</label>
+        <input
+          id="company-contact-phone"
+          type="tel"
+          formControlName="contactPhone"
+          autocomplete="tel"
+          class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+        />
+      </div>
+    </div>
+
+    <fieldset formGroupName="address" class="space-y-4 rounded-md border border-slate-200 p-4">
+      <legend class="px-1 text-sm font-semibold text-slate-700">Domicilio</legend>
+
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div class="space-y-1">
+          <label for="company-address-country" class="block text-sm font-medium text-slate-700">País</label>
+          <input
+            id="company-address-country"
+            type="text"
+            formControlName="country"
+            class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          />
+        </div>
+
+        <div class="space-y-1">
+          <label for="company-address-province" class="block text-sm font-medium text-slate-700">Provincia</label>
+          <select
+            id="company-address-province"
+            formControlName="province"
+            data-testid="company-province"
+            class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          >
+            @for (p of provinces(); track p.code) {
+              <option [value]="p.code">{{ p.name }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="space-y-1 sm:col-span-2">
+          <label for="company-address-city" class="block text-sm font-medium text-slate-700">Ciudad</label>
+          <input
+            id="company-address-city"
+            type="text"
+            formControlName="city"
+            class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          />
+        </div>
+
+        <div class="space-y-1 sm:col-span-2">
+          <label for="company-address-line" class="block text-sm font-medium text-slate-700">Calle</label>
+          <input
+            id="company-address-line"
+            type="text"
+            formControlName="line"
+            class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          />
+        </div>
+
+        <div class="space-y-1">
+          <label for="company-address-number" class="block text-sm font-medium text-slate-700">Número</label>
+          <input
+            id="company-address-number"
+            type="text"
+            formControlName="number"
+            class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          />
+        </div>
+
+        <div class="space-y-1">
+          <label for="company-address-postal-code" class="block text-sm font-medium text-slate-700">Código postal</label>
+          <input
+            id="company-address-postal-code"
+            type="text"
+            formControlName="postalCode"
+            autocomplete="postal-code"
+            class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          />
+        </div>
+
+        <div class="space-y-1">
+          <label for="company-address-floor" class="block text-sm font-medium text-slate-700">Piso</label>
+          <input
+            id="company-address-floor"
+            type="text"
+            formControlName="floor"
+            class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          />
+        </div>
+
+        <div class="space-y-1">
+          <label for="company-address-apartment" class="block text-sm font-medium text-slate-700">Departamento</label>
+          <input
+            id="company-address-apartment"
+            type="text"
+            formControlName="apartment"
+            class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          />
+        </div>
+      </div>
+    </fieldset>
+
+    <!--
+      Top-level error region — PR11c Discovery #23 pattern.
+      Always rendered with min-h so the layout does not jump.
+    -->
+    <div
+      role="status"
+      aria-live="polite"
+      class="min-h-[1.25rem] text-sm text-red-600"
+      data-testid="company-error"
+    >
+      {{ topLevelError }}
+    </div>
+
+    <div class="flex justify-end">
+      <button
+        type="button"
+        [disabled]="!canAdvance"
+        data-testid="company-next"
+        class="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300"
+      >
+        Siguiente
+      </button>
+    </div>
+  </form>
+</section>
