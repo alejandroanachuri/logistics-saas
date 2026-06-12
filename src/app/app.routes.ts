@@ -25,9 +25,7 @@ export const routes: Routes = [
   {
     path: 'register',
     loadComponent: () =>
-      import('./features/register/register-placeholder').then(
-        (m) => m.RegisterPlaceholderComponent,
-      ),
+      import('./features/register/wizard/register').then((m) => m.RegisterComponent),
   },
   {
     path: 'dashboard',
