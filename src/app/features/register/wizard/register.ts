@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, ViewChild, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ViewChild,
+  afterNextRender,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { Router } from '@angular/router';
 
 import { CompanyStepComponent } from '../steps/company-step';
@@ -35,11 +43,7 @@ import { RegisterRequest, RegisterResponse } from '../../../core/types';
   selector: 'app-register',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    CompanyStepComponent,
-    AdminStepComponent,
-    ConfirmationStepComponent,
-  ],
+  imports: [CompanyStepComponent, AdminStepComponent, ConfirmationStepComponent],
   templateUrl: './register.html',
 })
 export class RegisterComponent {
@@ -55,9 +59,8 @@ export class RegisterComponent {
   /**
    * Tick signal that increments on every form
    * status change. Read by {@code canAdvance} so the
-   * computed re-evaluates whenever a form's
-   * validity changes (the form's {@code .valid}
-   * getter is NOT signal-backed).
+   * computed re-runs on every form change. The actual
+   * validity read is in the switch below.
    */
   private readonly formTick = signal(0);
 
@@ -90,26 +93,37 @@ export class RegisterComponent {
   private readonly registrationService = inject(RegistrationService);
   private readonly router = inject(Router);
 
-  constructor() {
-    // Wire up {@code statusChanges} subscriptions after
-    // the first CD cycle (when the @ViewChild
-    // references are set). Use {@code queueMicrotask}
-    // so the subscription happens after Angular's
-    // first change-detection pass.
-    queueMicrotask(() => {
-      this.companyStep?.form.statusChanges.subscribe(() => {
-        this.formTick.update((n) => n + 1);
-      });
-      this.adminStep?.form.statusChanges.subscribe(() => {
-        this.formTick.update((n) => n + 1);
-      });
-      this.confirmationStep?.form.statusChanges.subscribe(() => {
-        this.formTick.update((n) => n + 1);
-      });
+  /**
+   * Wire {@code statusChanges} subscriptions to the
+   * 3 step forms AFTER the first render cycle. Using
+   * {@code afterNextRender} (Angular 21) instead of
+   * {@code queueMicrotask} guarantees the
+   * {@code @ViewChild} references are populated
+   * (queueMicrotask fires before the second CD cycle
+   * in some configurations, leaving the references
+   * still undefined — see PR13 / fix stepper-next
+   * discovery). The callback runs once after the
+   * first successful render and never again.
+   */
+  private readonly statusWire = afterNextRender(() => {
+    this.companyStep?.form.statusChanges.subscribe(() => {
+      this.formTick.update((n) => n + 1);
     });
-  }
+    this.adminStep?.form.statusChanges.subscribe(() => {
+      this.formTick.update((n) => n + 1);
+    });
+    this.confirmationStep?.form.statusChanges.subscribe(() => {
+      this.formTick.update((n) => n + 1);
+    });
+  });
 
   next(): void {
+    // Mark the current step's form as touched so any
+    // unfocused invalid fields show their per-field
+    // error message (PR13 fix). This is what the user
+    // expects when clicking Siguiente with an
+    // incomplete form: see which fields are missing.
+    this.markCurrentStepTouched();
     if (!this.canAdvance()) {
       return;
     }
@@ -121,6 +135,30 @@ export class RegisterComponent {
   previous(): void {
     if (this.currentStepIndex() > 0) {
       this.currentStepIndex.set(this.currentStepIndex() - 1);
+    }
+  }
+
+  /**
+   * Mark every control in the current step's form as
+   * touched so the per-field error messages (PR13
+   * pattern in company-step.html / admin-step.html)
+   * render their messages. Without this, the user
+   * clicking Siguiente on an invalid form would not
+   * see WHICH fields are wrong — the top-level
+   * aria-live fires but the per-field <p role="alert">
+   * stays hidden because the controls are pristine.
+   */
+  private markCurrentStepTouched(): void {
+    switch (this.currentStepIndex()) {
+      case 0:
+        this.companyStep?.form.markAllAsTouched();
+        return;
+      case 1:
+        this.adminStep?.form.markAllAsTouched();
+        return;
+      case 2:
+        this.confirmationStep?.form.markAllAsTouched();
+        return;
     }
   }
 
@@ -154,7 +192,7 @@ export class RegisterComponent {
         contactPhone: companyValue.contactPhone ?? '',
         address: {
           country: companyValue.address?.country ?? 'AR',
-          province: companyValue.address?.province ?? 'AR-B',
+          province: companyValue.address?.province ?? 'BUENOS_AIRES',
           city: companyValue.address?.city ?? '',
           line: companyValue.address?.line ?? '',
           number: companyValue.address?.number ?? '',
