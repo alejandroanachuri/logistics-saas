@@ -23,10 +23,10 @@ describe('ProvincesService', () => {
   let httpMock: { get: ReturnType<typeof vi.fn> };
   let service: ProvincesService;
 
-  const SAMPLE: Array<{ code: string; name: string }> = [
-    { code: 'AR-B', name: 'Buenos Aires' },
-    { code: 'AR-C', name: 'Ciudad Autónoma de Buenos Aires' },
-    { code: 'AR-X', name: 'Córdoba' },
+  const SAMPLE: Array<{ code: string; displayName: string }> = [
+    { code: 'AR-B', displayName: 'Buenos Aires' },
+    { code: 'AR-C', displayName: 'Ciudad Autónoma de Buenos Aires' },
+    { code: 'AR-X', displayName: 'Córdoba' },
   ];
 
   beforeEach(() => {
@@ -49,7 +49,7 @@ describe('ProvincesService', () => {
   it('GETs /api/v1/reference/provinces on the first call', () => {
     httpMock.get.mockReturnValue(of(SAMPLE));
 
-    let emitted: Array<{ code: string; name: string }> | undefined;
+    let emitted: Array<{ code: string; displayName: string }> | undefined;
     service.list().subscribe((r) => (emitted = r));
 
     expect(httpMock.get).toHaveBeenCalledTimes(1);
@@ -63,8 +63,8 @@ describe('ProvincesService', () => {
   it('returns the cached list on a second call without hitting the network', () => {
     httpMock.get.mockReturnValue(of(SAMPLE));
 
-    let first: Array<{ code: string; name: string }> | undefined;
-    let second: Array<{ code: string; name: string }> | undefined;
+    let first: Array<{ code: string; displayName: string }> | undefined;
+    let second: Array<{ code: string; displayName: string }> | undefined;
     service.list().subscribe((r) => (first = r));
     service.list().subscribe((r) => (second = r));
 
@@ -78,8 +78,8 @@ describe('ProvincesService', () => {
   it('shares a single in-flight request between concurrent subscribers', () => {
     httpMock.get.mockReturnValue(of(SAMPLE));
 
-    let first: Array<{ code: string; name: string }> | undefined;
-    let second: Array<{ code: string; name: string }> | undefined;
+    let first: Array<{ code: string; displayName: string }> | undefined;
+    let second: Array<{ code: string; displayName: string }> | undefined;
     // Both subscriptions registered before the source has
     // emitted (the http mock returns of(SAMPLE), which is
     // synchronous; shareReplay(1) collapses the in-flight
@@ -100,7 +100,7 @@ describe('ProvincesService', () => {
     service.list().subscribe();
 
     const found = service.getByCode('AR-B');
-    expect(found).toEqual({ code: 'AR-B', name: 'Buenos Aires' });
+    expect(found).toEqual({ code: 'AR-B', displayName: 'Buenos Aires' });
   });
 
   // -------- getByCode: unknown code → undefined (graceful) --------

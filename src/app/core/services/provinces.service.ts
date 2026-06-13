@@ -14,7 +14,7 @@ export interface Province {
   /** ISO-style provincial code, e.g. {@code AR-B} for Buenos Aires. */
   code: string;
   /** Human-readable province name in Spanish, e.g. {@code Buenos Aires}. */
-  name: string;
+  displayName: string;
 }
 
 /**

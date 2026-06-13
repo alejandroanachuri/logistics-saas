@@ -34,9 +34,9 @@ import { AvailabilityService } from '../../../core/services/availability.service
  */
 describe('CompanyStepComponent', () => {
   const SAMPLE_PROVINCES = [
-    { code: 'AR-B', name: 'Buenos Aires' },
-    { code: 'AR-C', name: 'Ciudad Autónoma de Buenos Aires' },
-    { code: 'AR-X', name: 'Córdoba' },
+    { code: 'AR-B', displayName: 'Buenos Aires' },
+    { code: 'AR-C', displayName: 'Ciudad Autónoma de Buenos Aires' },
+    { code: 'AR-X', displayName: 'Córdoba' },
   ];
 
   let availabilityMock: {
