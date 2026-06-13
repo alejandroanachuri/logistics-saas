@@ -90,8 +90,10 @@ public class SystemDataSourceConfig {
             // The migrate() call is silent; emit a single INFO line
             // so the operator can see what happened in the boot log.
             org.slf4j.LoggerFactory.getLogger(SystemDataSourceConfig.class)
-                    .info("Flyway migrate() complete: {} migrations applied, success={}",
-                            result.migrationsExecuted, result.success);
+                    .info(
+                            "Flyway migrate() complete: {} migrations applied, success={}",
+                            result.migrationsExecuted,
+                            result.success);
         };
     }
 }
