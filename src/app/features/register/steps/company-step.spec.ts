@@ -34,9 +34,9 @@ import { AvailabilityService } from '../../../core/services/availability.service
  */
 describe('CompanyStepComponent', () => {
   const SAMPLE_PROVINCES = [
-    { code: 'AR-B', displayName: 'Buenos Aires' },
-    { code: 'AR-C', displayName: 'Ciudad Autónoma de Buenos Aires' },
-    { code: 'AR-X', displayName: 'Córdoba' },
+    { code: 'BUENOS_AIRES', displayName: 'Buenos Aires' },
+    { code: 'CABA', displayName: 'Ciudad Autónoma de Buenos Aires' },
+    { code: 'CORDOBA', displayName: 'Córdoba' },
   ];
 
   let availabilityMock: {
@@ -71,7 +71,7 @@ describe('CompanyStepComponent', () => {
       contactPhone: '+54 11 5555-0000',
       address: {
         country: 'AR',
-        province: 'AR-B',
+        province: 'BUENOS_AIRES',
         city: 'CABA',
         line: 'Av Corrientes',
         number: '1234',
@@ -105,7 +105,7 @@ describe('CompanyStepComponent', () => {
   it('form is invalid when all controls are empty and the address defaults are seeded', () => {
     const { component } = render();
     expect(component.form.invalid).toBe(true);
-    expect(component.form.controls.address.controls.province.value).toBe('AR-B');
+    expect(component.form.controls.address.controls.province.value).toBe('BUENOS_AIRES');
     expect(component.form.controls.address.controls.country.value).toBe('AR');
   });
 
@@ -204,7 +204,7 @@ describe('CompanyStepComponent', () => {
     const options = Array.from(select!.querySelectorAll('option'));
     expect(options.length).toBe(3);
     const values = options.map((o) => (o as HTMLOptionElement).value);
-    expect(values).toEqual(['AR-B', 'AR-C', 'AR-X']);
+    expect(values).toEqual(['BUENOS_AIRES', 'CABA', 'CORDOBA']);
     const labels = options.map((o) => o.textContent?.trim() ?? '');
     expect(labels).toContain('Buenos Aires');
     expect(labels).toContain('Córdoba');

@@ -24,9 +24,9 @@ describe('ProvincesService', () => {
   let service: ProvincesService;
 
   const SAMPLE: Array<{ code: string; displayName: string }> = [
-    { code: 'AR-B', displayName: 'Buenos Aires' },
-    { code: 'AR-C', displayName: 'Ciudad Autónoma de Buenos Aires' },
-    { code: 'AR-X', displayName: 'Córdoba' },
+    { code: 'BUENOS_AIRES', displayName: 'Buenos Aires' },
+    { code: 'CABA', displayName: 'Ciudad Autónoma de Buenos Aires' },
+    { code: 'CORDOBA', displayName: 'Córdoba' },
   ];
 
   beforeEach(() => {
@@ -99,8 +99,8 @@ describe('ProvincesService', () => {
     httpMock.get.mockReturnValue(of(SAMPLE));
     service.list().subscribe();
 
-    const found = service.getByCode('AR-B');
-    expect(found).toEqual({ code: 'AR-B', displayName: 'Buenos Aires' });
+    const found = service.getByCode('BUENOS_AIRES');
+    expect(found).toEqual({ code: 'BUENOS_AIRES', displayName: 'Buenos Aires' });
   });
 
   // -------- getByCode: unknown code → undefined (graceful) --------

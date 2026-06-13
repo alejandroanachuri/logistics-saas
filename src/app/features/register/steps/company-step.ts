@@ -195,8 +195,8 @@ export class CompanyStepComponent {
   readonly provinces = toSignal(this.provincesService.list(), { initialValue: [] });
 
   constructor(private readonly fb: NonNullableFormBuilder) {
-    // Address defaults (country = 'AR', province = 'AR-B') are
-    // seeded in the initial value so the province <select>
+    // Address defaults (country = 'AR', province = 'BUENOS_AIRES')
+    // are seeded in the initial value so the province <select>
     // shows Buenos Aires by default.
     this.form = this.fb.group({
       legalName: this.fb.control('', {
@@ -222,7 +222,7 @@ export class CompanyStepComponent {
       }),
       address: this.fb.group({
         country: this.fb.control('AR', { validators: [Validators.required] }),
-        province: this.fb.control('AR-B', { validators: [Validators.required] }),
+        province: this.fb.control('BUENOS_AIRES', { validators: [Validators.required] }),
         city: this.fb.control('', {
           validators: [Validators.required, Validators.minLength(2), Validators.maxLength(60)],
         }),
