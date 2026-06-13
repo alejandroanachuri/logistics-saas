@@ -5,14 +5,23 @@
   <form [formGroup]="form" (ngSubmit)="$event.preventDefault()" novalidate class="mt-6 space-y-6">
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div class="space-y-1 sm:col-span-2">
-        <label for="company-legal-name" class="block text-sm font-medium text-slate-700">Razón social</label>
+        <label for="company-legal-name" class="block text-sm font-medium text-slate-700">
+          Razón social <span class="text-red-600" aria-hidden="true">*</span>
+        </label>
         <input
           id="company-legal-name"
           type="text"
           formControlName="legalName"
           autocomplete="organization"
+          aria-required="true"
+          [attr.aria-invalid]="shouldShowError(form.controls.legalName) ? 'true' : null"
+          [attr.aria-describedby]="errorMessageFor(form.controls.legalName) ? 'company-legal-name-error' : null"
+          [class.border-red-500]="shouldShowError(form.controls.legalName)"
           class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
         />
+        @if (errorMessageFor(form.controls.legalName); as msg) {
+          <p id="company-legal-name-error" role="alert" class="text-sm text-red-600">{{ msg }}</p>
+        }
       </div>
 
       <div class="space-y-1 sm:col-span-2">
@@ -21,67 +30,116 @@
           id="company-commercial-name"
           type="text"
           formControlName="commercialName"
+          [class.border-red-500]="shouldShowError(form.controls.commercialName)"
           class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
         />
+        @if (errorMessageFor(form.controls.commercialName); as msg) {
+          <p id="company-commercial-name-error" role="alert" class="text-sm text-red-600">{{ msg }}</p>
+        }
       </div>
 
       <div class="space-y-1">
-        <label for="company-cuit" class="block text-sm font-medium text-slate-700">CUIT</label>
+        <label for="company-cuit" class="block text-sm font-medium text-slate-700">
+          CUIT <span class="text-red-600" aria-hidden="true">*</span>
+        </label>
         <input
           id="company-cuit"
           type="text"
           inputmode="numeric"
           formControlName="cuit"
           maxlength="11"
+          aria-required="true"
+          [attr.aria-invalid]="shouldShowError(form.controls.cuit) ? 'true' : null"
+          [attr.aria-describedby]="errorMessageFor(form.controls.cuit) ? 'company-cuit-error' : null"
+          [class.border-red-500]="shouldShowError(form.controls.cuit)"
           class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
         />
+        @if (errorMessageFor(form.controls.cuit); as msg) {
+          <p id="company-cuit-error" role="alert" class="text-sm text-red-600">{{ msg }}</p>
+        }
       </div>
 
       <div class="space-y-1">
-        <label for="company-tax-type" class="block text-sm font-medium text-slate-700">Tipo de contribuyente</label>
+        <label for="company-tax-type" class="block text-sm font-medium text-slate-700">
+          Tipo de contribuyente <span class="text-red-600" aria-hidden="true">*</span>
+        </label>
         <select
           id="company-tax-type"
           formControlName="taxType"
           data-testid="company-tax-type"
+          aria-required="true"
+          [attr.aria-invalid]="shouldShowError(form.controls.taxType) ? 'true' : null"
+          [attr.aria-describedby]="errorMessageFor(form.controls.taxType) ? 'company-tax-type-error' : null"
+          [class.border-red-500]="shouldShowError(form.controls.taxType)"
           class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
         >
           <option value="RESPONSABLE_INSCRIPTO">Responsable Inscripto</option>
           <option value="MONOTRIBUTO">Monotributo</option>
           <option value="EXENTO">Exento</option>
         </select>
+        @if (errorMessageFor(form.controls.taxType); as msg) {
+          <p id="company-tax-type-error" role="alert" class="text-sm text-red-600">{{ msg }}</p>
+        }
       </div>
 
       <div class="space-y-1">
-        <label for="company-slug" class="block text-sm font-medium text-slate-700">Slug</label>
+        <label for="company-slug" class="block text-sm font-medium text-slate-700">
+          Slug <span class="text-red-600" aria-hidden="true">*</span>
+        </label>
         <input
           id="company-slug"
           type="text"
           formControlName="slug"
           spellcheck="false"
+          aria-required="true"
+          [attr.aria-invalid]="shouldShowError(form.controls.slug) ? 'true' : null"
+          [attr.aria-describedby]="errorMessageFor(form.controls.slug) ? 'company-slug-error' : null"
+          [class.border-red-500]="shouldShowError(form.controls.slug)"
           class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
         />
+        @if (errorMessageFor(form.controls.slug); as msg) {
+          <p id="company-slug-error" role="alert" class="text-sm text-red-600">{{ msg }}</p>
+        }
       </div>
 
       <div class="space-y-1">
-        <label for="company-contact-email" class="block text-sm font-medium text-slate-700">Email de contacto</label>
+        <label for="company-contact-email" class="block text-sm font-medium text-slate-700">
+          Email de contacto <span class="text-red-600" aria-hidden="true">*</span>
+        </label>
         <input
           id="company-contact-email"
           type="email"
           formControlName="contactEmail"
           autocomplete="email"
+          aria-required="true"
+          [attr.aria-invalid]="shouldShowError(form.controls.contactEmail) ? 'true' : null"
+          [attr.aria-describedby]="errorMessageFor(form.controls.contactEmail) ? 'company-contact-email-error' : null"
+          [class.border-red-500]="shouldShowError(form.controls.contactEmail)"
           class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
         />
+        @if (errorMessageFor(form.controls.contactEmail); as msg) {
+          <p id="company-contact-email-error" role="alert" class="text-sm text-red-600">{{ msg }}</p>
+        }
       </div>
 
       <div class="space-y-1 sm:col-span-2">
-        <label for="company-contact-phone" class="block text-sm font-medium text-slate-700">Teléfono de contacto</label>
+        <label for="company-contact-phone" class="block text-sm font-medium text-slate-700">
+          Teléfono de contacto <span class="text-red-600" aria-hidden="true">*</span>
+        </label>
         <input
           id="company-contact-phone"
           type="tel"
           formControlName="contactPhone"
           autocomplete="tel"
+          aria-required="true"
+          [attr.aria-invalid]="shouldShowError(form.controls.contactPhone) ? 'true' : null"
+          [attr.aria-describedby]="errorMessageFor(form.controls.contactPhone) ? 'company-contact-phone-error' : null"
+          [class.border-red-500]="shouldShowError(form.controls.contactPhone)"
           class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
         />
+        @if (errorMessageFor(form.controls.contactPhone); as msg) {
+          <p id="company-contact-phone-error" role="alert" class="text-sm text-red-600">{{ msg }}</p>
+        }
       </div>
     </div>
 
@@ -90,68 +148,122 @@
 
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div class="space-y-1">
-          <label for="company-address-country" class="block text-sm font-medium text-slate-700">País</label>
+          <label for="company-address-country" class="block text-sm font-medium text-slate-700">
+            País <span class="text-red-600" aria-hidden="true">*</span>
+          </label>
           <input
             id="company-address-country"
             type="text"
             formControlName="country"
+            aria-required="true"
+            [attr.aria-invalid]="shouldShowError(form.controls.address.controls.country) ? 'true' : null"
+            [attr.aria-describedby]="errorMessageFor(form.controls.address.controls.country) ? 'company-address-country-error' : null"
+            [class.border-red-500]="shouldShowError(form.controls.address.controls.country)"
             class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
           />
+          @if (errorMessageFor(form.controls.address.controls.country); as msg) {
+            <p id="company-address-country-error" role="alert" class="text-sm text-red-600">{{ msg }}</p>
+          }
         </div>
 
         <div class="space-y-1">
-          <label for="company-address-province" class="block text-sm font-medium text-slate-700">Provincia</label>
+          <label for="company-address-province" class="block text-sm font-medium text-slate-700">
+            Provincia <span class="text-red-600" aria-hidden="true">*</span>
+          </label>
           <select
             id="company-address-province"
             formControlName="province"
             data-testid="company-province"
+            aria-required="true"
+            [attr.aria-invalid]="shouldShowError(form.controls.address.controls.province) ? 'true' : null"
+            [attr.aria-describedby]="errorMessageFor(form.controls.address.controls.province) ? 'company-address-province-error' : null"
+            [class.border-red-500]="shouldShowError(form.controls.address.controls.province)"
             class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
           >
             @for (p of provinces(); track p.code) {
               <option [value]="p.code">{{ p.name }}</option>
             }
           </select>
+          @if (errorMessageFor(form.controls.address.controls.province); as msg) {
+            <p id="company-address-province-error" role="alert" class="text-sm text-red-600">{{ msg }}</p>
+          }
         </div>
 
         <div class="space-y-1 sm:col-span-2">
-          <label for="company-address-city" class="block text-sm font-medium text-slate-700">Ciudad</label>
+          <label for="company-address-city" class="block text-sm font-medium text-slate-700">
+            Ciudad <span class="text-red-600" aria-hidden="true">*</span>
+          </label>
           <input
             id="company-address-city"
             type="text"
             formControlName="city"
+            aria-required="true"
+            [attr.aria-invalid]="shouldShowError(form.controls.address.controls.city) ? 'true' : null"
+            [attr.aria-describedby]="errorMessageFor(form.controls.address.controls.city) ? 'company-address-city-error' : null"
+            [class.border-red-500]="shouldShowError(form.controls.address.controls.city)"
             class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
           />
+          @if (errorMessageFor(form.controls.address.controls.city); as msg) {
+            <p id="company-address-city-error" role="alert" class="text-sm text-red-600">{{ msg }}</p>
+          }
         </div>
 
         <div class="space-y-1 sm:col-span-2">
-          <label for="company-address-line" class="block text-sm font-medium text-slate-700">Calle</label>
+          <label for="company-address-line" class="block text-sm font-medium text-slate-700">
+            Calle <span class="text-red-600" aria-hidden="true">*</span>
+          </label>
           <input
             id="company-address-line"
             type="text"
             formControlName="line"
+            aria-required="true"
+            [attr.aria-invalid]="shouldShowError(form.controls.address.controls.line) ? 'true' : null"
+            [attr.aria-describedby]="errorMessageFor(form.controls.address.controls.line) ? 'company-address-line-error' : null"
+            [class.border-red-500]="shouldShowError(form.controls.address.controls.line)"
             class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
           />
+          @if (errorMessageFor(form.controls.address.controls.line); as msg) {
+            <p id="company-address-line-error" role="alert" class="text-sm text-red-600">{{ msg }}</p>
+          }
         </div>
 
         <div class="space-y-1">
-          <label for="company-address-number" class="block text-sm font-medium text-slate-700">Número</label>
+          <label for="company-address-number" class="block text-sm font-medium text-slate-700">
+            Número <span class="text-red-600" aria-hidden="true">*</span>
+          </label>
           <input
             id="company-address-number"
             type="text"
             formControlName="number"
+            aria-required="true"
+            [attr.aria-invalid]="shouldShowError(form.controls.address.controls.number) ? 'true' : null"
+            [attr.aria-describedby]="errorMessageFor(form.controls.address.controls.number) ? 'company-address-number-error' : null"
+            [class.border-red-500]="shouldShowError(form.controls.address.controls.number)"
             class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
           />
+          @if (errorMessageFor(form.controls.address.controls.number); as msg) {
+            <p id="company-address-number-error" role="alert" class="text-sm text-red-600">{{ msg }}</p>
+          }
         </div>
 
         <div class="space-y-1">
-          <label for="company-address-postal-code" class="block text-sm font-medium text-slate-700">Código postal</label>
+          <label for="company-address-postal-code" class="block text-sm font-medium text-slate-700">
+            Código postal <span class="text-red-600" aria-hidden="true">*</span>
+          </label>
           <input
             id="company-address-postal-code"
             type="text"
             formControlName="postalCode"
             autocomplete="postal-code"
+            aria-required="true"
+            [attr.aria-invalid]="shouldShowError(form.controls.address.controls.postalCode) ? 'true' : null"
+            [attr.aria-describedby]="errorMessageFor(form.controls.address.controls.postalCode) ? 'company-address-postal-code-error' : null"
+            [class.border-red-500]="shouldShowError(form.controls.address.controls.postalCode)"
             class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
           />
+          @if (errorMessageFor(form.controls.address.controls.postalCode); as msg) {
+            <p id="company-address-postal-code-error" role="alert" class="text-sm text-red-600">{{ msg }}</p>
+          }
         </div>
 
         <div class="space-y-1">
@@ -160,8 +272,12 @@
             id="company-address-floor"
             type="text"
             formControlName="floor"
+            [class.border-red-500]="shouldShowError(form.controls.address.controls.floor)"
             class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
           />
+          @if (errorMessageFor(form.controls.address.controls.floor); as msg) {
+            <p id="company-address-floor-error" role="alert" class="text-sm text-red-600">{{ msg }}</p>
+          }
         </div>
 
         <div class="space-y-1">
@@ -170,8 +286,12 @@
             id="company-address-apartment"
             type="text"
             formControlName="apartment"
+            [class.border-red-500]="shouldShowError(form.controls.address.controls.apartment)"
             class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
           />
+          @if (errorMessageFor(form.controls.address.controls.apartment); as msg) {
+            <p id="company-address-apartment-error" role="alert" class="text-sm text-red-600">{{ msg }}</p>
+          }
         </div>
       </div>
     </fieldset>

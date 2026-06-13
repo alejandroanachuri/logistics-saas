@@ -253,6 +253,93 @@ describe('CompanyStepComponent', () => {
     expect(component.form.valid).toBe(true);
     expect(button.disabled).toBe(false);
   });
+
+  // -------- PR13 (per-field error copy) --------
+  //
+  // The 4 scenarios below cover the new `errorMessageFor`
+  // helper. The helper must be a pure function of
+  // (control, touched, errors) — no template coupling, no
+  // side effects. The 5th scenario drives the template:
+  // it proves the @if-error block is wired to the helper.
+
+  it('errorMessageFor: returns null when the control has no errors (or is untouched)', () => {
+    const { component } = render();
+    // No errors + untouched → null (no message shown on first render).
+    expect(component.errorMessageFor(component.form.controls.legalName)).toBeNull();
+    // Make it touched but still no errors → null (clean value, no message).
+    component.form.controls.legalName.setValue('Acme');
+    component.form.controls.legalName.markAsTouched();
+    expect(component.errorMessageFor(component.form.controls.legalName)).toBeNull();
+  });
+
+  it('errorMessageFor: returns "Este campo es obligatorio." for required + touched', () => {
+    const { component } = render();
+    component.form.controls.legalName.setValue('');
+    component.form.controls.legalName.markAsTouched();
+    expect(component.errorMessageFor(component.form.controls.legalName)).toBe(
+      'Este campo es obligatorio.',
+    );
+  });
+
+  it('errorMessageFor: returns "CUIT inválido. Verificá el dígito verificador." for bad mod-11', () => {
+    const { component } = render();
+    component.form.controls.cuit.setValue('30123456780'); // bad check digit
+    component.form.controls.cuit.markAsTouched();
+    expect(component.errorMessageFor(component.form.controls.cuit)).toBe(
+      'CUIT inválido. Verificá el dígito verificador.',
+    );
+  });
+
+  it('errorMessageFor: returns "Este slug ya está en uso." for async slugTaken + touched', async () => {
+    availabilityMock.checkSlug.mockReturnValue(
+      of({ available: false, reason: 'SLUG_ALREADY_TAKEN' }),
+    );
+    const { component } = render();
+    component.form.controls.slug.setValue('taken');
+    await new Promise((r) => setTimeout(r, 400));
+    component.form.controls.slug.markAsTouched();
+    expect(component.errorMessageFor(component.form.controls.slug)).toBe(
+      'Este slug ya está en uso.',
+    );
+  });
+
+  it('errorMessageFor wiring: renders the per-field error <p role="alert"> when legalName is touched empty', () => {
+    const { host, component, refresh } = render();
+    component.form.controls.legalName.setValue('');
+    component.form.controls.legalName.markAsTouched();
+    refresh();
+    const errorEl = host.querySelector('#company-legal-name-error');
+    expect(errorEl).toBeTruthy();
+    expect(errorEl!.getAttribute('role')).toBe('alert');
+    expect(errorEl!.textContent?.trim()).toBe('Este campo es obligatorio.');
+    // The input must carry aria-invalid="true" and the
+    // matching aria-describedby so AT pairs them up.
+    const input = host.querySelector('#company-legal-name') as HTMLInputElement;
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(input.getAttribute('aria-describedby')).toBe('company-legal-name-error');
+  });
+
+  // -------- PR13 (required-field asterisks) --------
+
+  it('required-field wiring: legalName input has aria-required="true" and label has the * marker', () => {
+    const { host } = render();
+    const input = host.querySelector('#company-legal-name') as HTMLInputElement;
+    expect(input.getAttribute('aria-required')).toBe('true');
+    // The label is associated via for/id; the asterisk
+    // lives inside the <label> and is hidden from AT.
+    const label = host.querySelector('label[for="company-legal-name"]') as HTMLLabelElement;
+    const asterisk = label.querySelector('span[aria-hidden="true"]');
+    expect(asterisk).toBeTruthy();
+    expect(asterisk!.textContent?.trim()).toBe('*');
+  });
+
+  it('required-field wiring: commercialName input is OPTIONAL — no aria-required, no asterisk', () => {
+    const { host } = render();
+    const input = host.querySelector('#company-commercial-name') as HTMLInputElement;
+    expect(input.hasAttribute('aria-required')).toBe(false);
+    const label = host.querySelector('label[for="company-commercial-name"]') as HTMLLabelElement;
+    expect(label.querySelector('span[aria-hidden="true"]')).toBeNull();
+  });
 });
 
 /**
