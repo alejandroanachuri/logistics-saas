@@ -214,6 +214,67 @@ describe('AdminStepComponent', () => {
     refresh();
     expect(passwordInput.type).toBe('password');
   });
+
+  // -------- PR13 (per-field error copy) --------
+
+  it('errorMessageFor: returns "Las contraseñas no coinciden." for passwordConfirmation mismatch + touched', () => {
+    const { component } = render();
+    component.form.controls.password.setValue('MiPassw0rd!Seguro');
+    component.form.controls.passwordConfirmation.setValue('OtraCosa');
+    component.form.controls.passwordConfirmation.markAsTouched();
+    expect(component.errorMessageFor(component.form.controls.passwordConfirmation)).toBe(
+      'Las contraseñas no coinciden.',
+    );
+  });
+
+  it('errorMessageFor: returns "Este campo es obligatorio." for required + touched', () => {
+    const { component } = render();
+    component.form.controls.username.setValue('');
+    component.form.controls.username.markAsTouched();
+    expect(component.errorMessageFor(component.form.controls.username)).toBe(
+      'Este campo es obligatorio.',
+    );
+  });
+
+  it('errorMessageFor wiring: renders the per-field error <p role="alert"> for an empty touched username', () => {
+    const { host, component, refresh } = render();
+    component.form.controls.username.setValue('');
+    component.form.controls.username.markAsTouched();
+    refresh();
+    const errorEl = host.querySelector('#admin-username-error');
+    expect(errorEl).toBeTruthy();
+    expect(errorEl!.getAttribute('role')).toBe('alert');
+    expect(errorEl!.textContent?.trim()).toBe('Este campo es obligatorio.');
+    // The input must carry aria-invalid="true" and the
+    // matching aria-describedby so AT pairs them up.
+    const input = host.querySelector('#admin-username') as HTMLInputElement;
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(input.getAttribute('aria-describedby')).toBe('admin-username-error');
+  });
+
+  // -------- PR13 (required-field asterisks) --------
+
+  it('required-field wiring: every admin input has aria-required="true" and the label has the * marker', () => {
+    const { host } = render();
+    const ids = [
+      'admin-first-name',
+      'admin-last-name',
+      'admin-username',
+      'admin-email',
+      'admin-password',
+      'admin-password-confirmation',
+    ];
+    for (const id of ids) {
+      const input = host.querySelector(`#${id}`) as HTMLInputElement;
+      expect(input, `expected input #${id} to be in the DOM`).toBeTruthy();
+      expect(input.getAttribute('aria-required')).toBe('true');
+      const label = host.querySelector(`label[for="${id}"]`) as HTMLLabelElement;
+      expect(label, `expected label[for="${id}"] to be in the DOM`).toBeTruthy();
+      const asterisk = label.querySelector('span[aria-hidden="true"]');
+      expect(asterisk, `expected label[for="${id}"] to carry the * marker`).toBeTruthy();
+      expect(asterisk!.textContent?.trim()).toBe('*');
+    }
+  });
 });
 
 /**

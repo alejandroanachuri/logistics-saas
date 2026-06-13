@@ -216,4 +216,49 @@ export class AdminStepComponent {
     }
     return 'Revisá los campos marcados en rojo.';
   }
+
+  /**
+   * Per-field Spanish error copy. Returns {@code null}
+   * when the control has no errors or has not been
+   * touched / dirtied — the template binds the result to
+   * an {@code @if} block so the DOM stays empty on first
+   * render (avoids layout jump + premature "required"
+   * shouting at the user).
+   *
+   * <p>The mapping covers the error keys that the admin
+   * step's 6 controls can produce: required, email, the
+   * username pattern, password min/max length, the
+   * username async validator ({@code usernameTaken}), and
+   * the cross-field {@code mismatch} validator on
+   * {@code passwordConfirmation}.
+   */
+  errorMessageFor(control: AbstractControl | null): string | null {
+    if (!control || !control.errors) return null;
+    if (!this.shouldShowError(control)) return null;
+    const errs = control.errors;
+    if (errs['required']) return 'Este campo es obligatorio.';
+    if (errs['email']) return 'Ingresá un email válido.';
+    if (errs['minlength'])
+      return `Mínimo ${(errs['minlength'] as { requiredLength: number }).requiredLength} caracteres.`;
+    if (errs['maxlength'])
+      return `Máximo ${(errs['maxlength'] as { requiredLength: number }).requiredLength} caracteres.`;
+    if (errs['pattern']) return 'Formato inválido.';
+    if (errs['usernameTaken']) return 'Este usuario ya existe.';
+    if (errs['mismatch']) return 'Las contraseñas no coinciden.';
+    return 'Revisá este campo.';
+  }
+
+  /**
+   * True when the control is invalid AND has been
+   * touched or dirtied. Shared by the template's
+   * {@code aria-invalid}, {@code aria-describedby}, and
+   * {@code border-red-500} bindings so the three stay in
+   * lock-step. Extracted from the helper so the template
+   * can call the cheap boolean without rebuilding the
+   * error string.
+   */
+  shouldShowError(control: AbstractControl | null): boolean {
+    if (!control) return false;
+    return control.invalid && (control.touched || control.dirty);
+  }
 }
