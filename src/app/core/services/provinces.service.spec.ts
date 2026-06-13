@@ -29,6 +29,11 @@ describe('ProvincesService', () => {
     { code: 'CORDOBA', displayName: 'Córdoba' },
   ];
 
+  // The backend wraps the array in a `{ data: [...] }` envelope
+  // (per the reference-data spec). The spec mocks the full
+  // HTTP response shape.
+  const SAMPLE_ENVELOPE = { data: SAMPLE };
+
   beforeEach(() => {
     httpMock = { get: vi.fn() };
     TestBed.configureTestingModule({
@@ -47,7 +52,7 @@ describe('ProvincesService', () => {
   // -------- cache miss → network --------
 
   it('GETs /api/v1/reference/provinces on the first call', () => {
-    httpMock.get.mockReturnValue(of(SAMPLE));
+    httpMock.get.mockReturnValue(of(SAMPLE_ENVELOPE));
 
     let emitted: Array<{ code: string; displayName: string }> | undefined;
     service.list().subscribe((r) => (emitted = r));
@@ -61,7 +66,7 @@ describe('ProvincesService', () => {
   // -------- cache hit → no network --------
 
   it('returns the cached list on a second call without hitting the network', () => {
-    httpMock.get.mockReturnValue(of(SAMPLE));
+    httpMock.get.mockReturnValue(of(SAMPLE_ENVELOPE));
 
     let first: Array<{ code: string; displayName: string }> | undefined;
     let second: Array<{ code: string; displayName: string }> | undefined;
@@ -76,7 +81,7 @@ describe('ProvincesService', () => {
   // -------- concurrent subscribers share one in-flight request --------
 
   it('shares a single in-flight request between concurrent subscribers', () => {
-    httpMock.get.mockReturnValue(of(SAMPLE));
+    httpMock.get.mockReturnValue(of(SAMPLE_ENVELOPE));
 
     let first: Array<{ code: string; displayName: string }> | undefined;
     let second: Array<{ code: string; displayName: string }> | undefined;
@@ -96,7 +101,7 @@ describe('ProvincesService', () => {
   // -------- getByCode: lookup against the cached list --------
 
   it('getByCode returns the matching province from the cached list', () => {
-    httpMock.get.mockReturnValue(of(SAMPLE));
+    httpMock.get.mockReturnValue(of(SAMPLE_ENVELOPE));
     service.list().subscribe();
 
     const found = service.getByCode('BUENOS_AIRES');
@@ -106,7 +111,7 @@ describe('ProvincesService', () => {
   // -------- getByCode: unknown code → undefined (graceful) --------
 
   it('getByCode returns undefined for an unknown code (does not throw)', () => {
-    httpMock.get.mockReturnValue(of(SAMPLE));
+    httpMock.get.mockReturnValue(of(SAMPLE_ENVELOPE));
     service.list().subscribe();
 
     const found = service.getByCode('XX-XX');

@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of, shareReplay, tap } from 'rxjs';
+import { Observable, of, shareReplay, tap, map } from 'rxjs';
 
 /**
  * Wire shape for the {@code GET /api/v1/reference/provinces}
@@ -43,13 +43,19 @@ export class ProvincesService {
    * {@code GET /api/v1/reference/provinces}. Returns the
    * in-memory cache on every call after the first; the
    * first subscriber triggers exactly one HTTP request.
+   *
+   * <p>The backend wraps the array in {@code { data: [...] }}
+   * (a forward-compatible envelope per the {@code reference-data}
+   * spec). The service destructures the envelope before
+   * caching so subscribers always see a plain {@code Province[]}.
    */
   list(): Observable<Province[]> {
     if (this.cache !== null) {
       return of(this.cache);
     }
-    return this.http.get<Province[]>('/api/v1/reference/provinces').pipe(
-      tap((list) => (this.cache = list)),
+    return this.http.get<{ data: Province[] }>('/api/v1/reference/provinces').pipe(
+      tap((envelope) => (this.cache = envelope.data)),
+      map((envelope) => envelope.data),
       shareReplay(1),
     );
   }
