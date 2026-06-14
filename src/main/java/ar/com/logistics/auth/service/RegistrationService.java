@@ -252,17 +252,39 @@ public class RegistrationService {
      * can show a slug-side error before re-asking the username.
      */
     public UsernameAvailabilityResponse checkUsernameAvailability(String slug, String username) {
-        // 1. Tenant must exist
-        var tenant = tenantAdminRepository.findBySlug(slug);
-        if (tenant.isEmpty()) {
-            return UsernameAvailabilityResponse.unavailable(slug, username, "SLUG_NOT_FOUND");
-        }
-        UUID tenantId = tenant.get().getId();
-
-        // 2. Username format
+        // 1. Username format (check before the DB query — the slug
+        // may not exist yet if the user is in the middle of the
+        // register wizard's step 2 typing the username, but the
+        // username is still being validated for format).
         if (!UsernameValidator.isValid(username)) {
             return UsernameAvailabilityResponse.unavailable(slug, username, "VALIDATION_ERROR");
         }
+
+        // 2. Tenant must exist. If the slug is not in the DB,
+        // return AVAILABLE (not UNAVAILABLE) because there is
+        // no existing tenant whose username space could
+        // collide with this one. The user is in the middle of
+        // the register wizard (the slug they typed in step 1
+        // has not been created yet), and the username is
+        // trivially available against the (empty) username
+        // space of a (non-existent) tenant.
+        //
+        // The final uniqueness check happens at the /auth/register
+        // POST endpoint, which is the only place where we can
+        // guarantee atomicity (the slug and the username are
+        // committed in the same transaction; if the slug was
+        // created concurrently between this check and the POST,
+        // the POST will fail with USERNAME_ALREADY_TAKEN).
+        //
+        // Returning UNAVAILABLE here caused the F1 wizard to
+        // falsely show "Este usuario ya existe" for any username
+        // typed against a slug that had not yet been registered
+        // (i.e. every slug during the wizard's step 2).
+        var tenant = tenantAdminRepository.findBySlug(slug);
+        if (tenant.isEmpty()) {
+            return UsernameAvailabilityResponse.available(slug, username);
+        }
+        UUID tenantId = tenant.get().getId();
 
         // 3. Per-tenant uniqueness (case-insensitive per spec)
         boolean taken = companyUserAdminRepository.existsByTenantIdAndUsername(tenantId, username.toLowerCase());
