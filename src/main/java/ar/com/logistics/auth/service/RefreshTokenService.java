@@ -94,7 +94,7 @@ public class RefreshTokenService {
         String hash = passwordEncoder.encode(rawUuid.toString());
         Instant expiresAt = Instant.now().plus(REFRESH_TTL);
 
-        refreshTokenRepo.insertRow(rowId, user.getId(), UserScope.COMPANY, tenant.getId(), hash, expiresAt);
+        refreshTokenRepo.insertRow(rowId, user.getId(), UserScope.COMPANY.name(), tenant.getId(), hash, expiresAt);
 
         return new Issued(rowId, rawUuid, expiresAt, user, tenant, role);
     }
@@ -172,7 +172,8 @@ public class RefreshTokenService {
         String newHash = passwordEncoder.encode(newRawUuid.toString());
         UUID newRowId = UUID.randomUUID();
         Instant newExpiresAt = Instant.now().plus(REFRESH_TTL);
-        refreshTokenRepo.insertRow(newRowId, user.getId(), UserScope.COMPANY, tenant.getId(), newHash, newExpiresAt);
+        refreshTokenRepo.insertRow(
+                newRowId, user.getId(), UserScope.COMPANY.name(), tenant.getId(), newHash, newExpiresAt);
 
         // Revoke the old row, chaining it.
         match.setRevokedAt(Instant.now());

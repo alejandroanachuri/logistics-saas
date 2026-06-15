@@ -1,7 +1,6 @@
 package ar.com.logistics.auth.repository.system;
 
 import ar.com.logistics.auth.domain.RefreshToken;
-import ar.com.logistics.auth.domain.RefreshToken.UserScope;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -96,6 +95,22 @@ public interface RefreshTokenAdminRepository extends JpaRepository<RefreshToken,
      * {@code RefreshTokenService.persistRefreshRow} for the
      * rationale). Native insert keeps the entity pure: no
      * setters, no JPA-managed field assignments.
+     *
+     * <p>The {@code scope} parameter is typed {@code String} (not
+     * {@code UserScope}) because native queries do not honor
+     * JPA's {@code @Enumerated(EnumType.STRING)} mapping. The
+     * caller is responsible for passing {@code UserScope.name()}
+     * (e.g. {@code "COMPANY"}, not the enum constant). Hibernate
+     * 7 with a native query + a Java enum param sends the
+     * ordinal (0, 1) by default, which fails the
+     * {@code refresh_tokens_user_scope_check} CHECK constraint
+     * that requires the string values {@code 'COMPANY'} or
+     * {@code 'PLATFORM'}. Discovered via F1 end-to-end testing on
+     * 2026-06-15: the first login after register failed at the
+     * refresh-token insert with
+     * {@code DataIntegrityViolationException: ... violates check
+     * constraint "refresh_tokens_user_scope_check"} because the
+     * param binding sent 0 instead of 'COMPANY'.
      */
     @Modifying
     @Query(
@@ -110,7 +125,7 @@ public interface RefreshTokenAdminRepository extends JpaRepository<RefreshToken,
     void insertRow(
             @Param("id") UUID id,
             @Param("userId") UUID userId,
-            @Param("scope") UserScope scope,
+            @Param("scope") String scope,
             @Param("tenantId") UUID tenantId,
             @Param("tokenHash") String tokenHash,
             @Param("expiresAt") Instant expiresAt);
