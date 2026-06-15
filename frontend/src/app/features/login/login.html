@@ -1,0 +1,93 @@
+<main class="w-full max-w-md">
+  <section class="rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
+    <h1 class="text-2xl font-semibold text-slate-900">Iniciar sesión</h1>
+    <p class="mt-2 text-sm text-slate-600">Ingresá con tu slug de empresa, usuario y contraseña.</p>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate class="mt-6 space-y-4">
+      <div class="space-y-1">
+        <label for="login-slug" class="block text-sm font-medium text-slate-700">Slug de la empresa</label>
+        <input
+          id="login-slug"
+          type="text"
+          formControlName="slug"
+          autocomplete="organization"
+          spellcheck="false"
+          class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+        />
+      </div>
+
+      <div class="space-y-1">
+        <label for="login-username" class="block text-sm font-medium text-slate-700">Usuario</label>
+        <input
+          id="login-username"
+          type="text"
+          formControlName="username"
+          autocomplete="username"
+          spellcheck="false"
+          class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+        />
+      </div>
+
+      <div class="space-y-1">
+        <label for="login-password" class="block text-sm font-medium text-slate-700">Contraseña</label>
+        <div class="relative">
+          <input
+            id="login-password"
+            [type]="isPasswordVisible() ? 'text' : 'password'"
+            formControlName="password"
+            autocomplete="current-password"
+            class="block w-full rounded-md border border-slate-300 px-3 py-2 pr-20 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          />
+          <button
+            type="button"
+            (click)="togglePasswordVisibility()"
+            [attr.aria-label]="isPasswordVisible() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+            [attr.aria-pressed]="isPasswordVisible()"
+            class="absolute inset-y-0 right-0 flex items-center px-3 text-sm font-medium text-slate-600 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-1 rounded-r-md"
+          >
+            {{ isPasswordVisible() ? 'Ocultar' : 'Mostrar' }}
+          </button>
+        </div>
+      </div>
+
+      <!--
+        Error region — PR11c binds the message from
+        LoginService.extractErrorCopy(thrown).message into
+        this region. The element must exist in the DOM with
+        the aria-live politeness setting for screen readers
+        to announce the error after a failed submit.
+      -->
+      <div
+        role="status"
+        aria-live="polite"
+        class="min-h-[1.25rem] text-sm text-red-600"
+        data-testid="login-error"
+      >
+        {{ errorMessage() }}
+      </div>
+
+      <button
+        type="submit"
+        [disabled]="form.invalid || isLoading()"
+        class="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300"
+      >
+        {{ isLoading() ? 'Ingresando...' : 'Ingresar' }}
+      </button>
+
+      <div class="flex items-center justify-between pt-2">
+        <button
+          type="button"
+          disabled
+          title="Próximamente"
+          aria-disabled="true"
+          class="cursor-not-allowed text-sm font-medium text-slate-400"
+        >
+          ¿Olvidaste tu contraseña?
+        </button>
+        <a routerLink="/register" class="text-sm font-medium text-slate-900 hover:underline">
+          Registrate
+        </a>
+      </div>
+    </form>
+  </section>
+</main>
