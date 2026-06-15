@@ -87,7 +87,7 @@ public class RefreshTokenService {
      * and persist the row. Returns the row id and the raw UUID the
      * caller will write to the cookie.
      */
-    @Transactional
+    @Transactional("systemTransactionManager")
     public Issued issue(CompanyUser user, Tenant tenant, Role role) {
         UUID rowId = UUID.randomUUID();
         UUID rawUuid = UUID.randomUUID();
@@ -116,7 +116,7 @@ public class RefreshTokenService {
      * @param rawCookie the value the client stored in the
      *                  {@code refresh_token} cookie
      */
-    @Transactional
+    @Transactional("systemTransactionManager")
     public Refreshed validateAndRotate(String rawCookie) {
         if (rawCookie == null || rawCookie.isBlank()) {
             throw new AuthenticationException(ErrorCode.REFRESH_TOKEN_INVALID);
@@ -196,7 +196,7 @@ public class RefreshTokenService {
      * lives in PR7). Idempotent: a second call with the same
      * cookie is a no-op and returns {@code false}.
      */
-    @Transactional
+    @Transactional("systemTransactionManager")
     public boolean revoke(String rawCookie) {
         if (rawCookie == null || rawCookie.isBlank()) {
             return false;
@@ -231,7 +231,7 @@ public class RefreshTokenService {
      * {@code id IN (...)} UPDATE then revokes them all in one
      * statement.
      */
-    @Transactional
+    @Transactional("systemTransactionManager")
     public int handleReuse(RefreshToken start) {
         List<UUID> chainIds = refreshTokenRepo.findChainIds(start.getId());
         if (chainIds.isEmpty()) {

@@ -102,7 +102,7 @@ public class LoginService {
      * @param rawPassword plaintext password from the request body
      * @return the {@link LoginResult} the controller serializes
      */
-    @Transactional
+    @Transactional("systemTransactionManager")
     public LoginResult login(String slug, String username, String rawPassword) {
         // 1. Resolve the tenant. If it does not exist we MUST treat
         //    the result as INVALID_CREDENTIALS — the spec says the
