@@ -1,0 +1,55 @@
+schema: spec-driven
+
+# Detected at sdd-init on 2026-06-10
+context: |
+  Project: logistics-saas (M1 monorepo logical layout)
+  Repo layout: backend/ and frontend/ are sibling directories; SDD treats them
+    as one change with commits planned per work unit that may span both.
+    Each repo gets its own PR at the end, but planning/scope is unified.
+    NOTE: frontend/ has its own .git; backend/ is NOT git-initialized yet
+    (no .git/ in backend/) — backend must be `git init`-ed before first apply.
+  Backend: Spring Boot 4.0.6, Java 21, Maven (mvnw). Group ar.com.logistics.
+    Stack: spring-boot-starter + spring-boot-starter-test (transitive JUnit5,
+    Mockito, AssertJ). application.properties: spring.application.name=backend.
+    No web/data/JPA starter declared yet — backend is a bare skeleton
+    (single @SpringBootApplication class + a default context-load test).
+    No Testcontainers declared.
+  Frontend: Angular ^21.0.0, package manager bun@1.2.9, Vitest 4.0.8 + jsdom,
+    TypeScript 5.9.2, Tailwind 4. Prettier configured (printWidth 100).
+    Test builder: @angular/build:unit-test (Vitest). tsconfig.spec.json uses
+    vitest/globals. No Playwright/E2E declared.
+  Style: English for code/UI/commits. AGENTS.md persona rules apply.
+  Strict TDD: ACTIVE (both backends and frontends test runners present and
+    runnable, no opt-out marker).
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - Cover both backend/ and frontend/ in scope when a change spans the stack
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+    - Specs are deltas in openspec/changes/{change}/specs/{domain}/spec.md
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+    - Mark backend vs frontend task origin explicitly
+  apply:
+    tdd: true
+    test_command:
+      backend: "./mvnw test"
+      frontend: "bun run test"
+  verify:
+    test_command:
+      backend: "./mvnw test"
+      frontend: "bun run test"
+    build_command:
+      backend: "./mvnw -DskipTests package"
+      frontend: "bun run build"
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas
+    - Move completed changes to changes/archive/YYYY-MM-DD-{change-name}/

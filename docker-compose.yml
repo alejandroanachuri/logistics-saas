@@ -1,0 +1,36 @@
+# docker-compose.yml — Logistics SaaS local dev environment
+#
+# Boots a Postgres 16 instance with the three RLS roles
+# (app_user, app_admin/BYPASSRLS, app_platform) plus the migrator
+# superuser used by Flyway. The init script runs once on first
+# container start; the postgres_data volume keeps state across
+# restarts.
+#
+# Usage:
+#   docker compose up -d postgres
+#   cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: logistics-saas-postgres
+    environment:
+      POSTGRES_DB: logistics
+      POSTGRES_USER: migrator
+      POSTGRES_PASSWORD: migrator
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/initdb:/docker-entrypoint-initdb.d:ro
+    command:
+      - postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U migrator -d logistics"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
+    name: logistics-saas_postgres_data

@@ -1,0 +1,53 @@
+# Root .gitignore — applied at the monorepo level. Each sub-repo
+# (backend/, frontend/) has its own .gitignore that takes precedence
+# for files inside that directory. This file catches files that
+# would otherwise leak across both repos.
+
+# --- Secrets and local config ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# --- IDE and editor state ---
+.idea/
+.vscode/  # see exceptions below for project-shared settings
+*.iml
+*.ipr
+*.iws
+.DS_Store
+Thumbs.db
+
+# --- Build output (covered by sub-repo gitignores, duplicated here for safety) ---
+node_modules/
+dist/
+build/
+out-tsc/
+out/
+coverage/
+.angular/
+playwright-report/
+test-results/
+target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+
+# --- Logs ---
+*.log
+logs/
+
+# --- OS metadata ---
+.DS_Store
+ehthumbs.db
+Desktop.ini
+
+# --- Bun / npm / yarn caches ---
+.bun/
+.pnp.*
+.yarn/cache
+
+# --- Docker volume local mounts (dev only) ---
+postgres_data/
