@@ -1,0 +1,208 @@
+# =============================================================================
+# application.yml — Logistics SaaS base configuration
+# =============================================================================
+# Profile-agnostic defaults. Per-profile overrides live in
+# application-dev.yml and application-prod.yml.
+#
+# DataSource note: PR1d replaces the single DataSource with three
+# role-specific pools (ADR-0002):
+# - companyDataSource -> app_user (RLS ENFORCED)
+# - systemDataSource -> app_admin (BYPASSRLS)
+# - platformDataSource -> app_platform (cross-tenant RLS)
+# Each pool is sized to 5 connections; total = 15 connections, which
+# fits a 2 vCPU / 4 GB Postgres without saturating max_connections
+# (default 100).
+#
+# Migrations run under a fourth user (app_migrations) that the
+# V8 migration grants DDL rights to; Flyway is configured in PR1b to
+# use DATABASE_MIGRATION_URL/USER/PASSWORD when those env vars are
+# present, otherwise it falls back to the systemDataSource pool.
+# =============================================================================
+
+spring:
+  application:
+    name: logistics-saas
+
+  # Disable the single-DataSource auto-configuration so the three
+  # explicit configs (Company/System/Platform) own the wiring.
+  # Spring Boot 4 still exposes spring.datasource.url/properties
+  # but the auto-configured DataSource is suppressed by the
+  # absence of any @Bean of type DataSource that is NOT one of the
+  # three explicit ones.
+
+  # ----- JPA / Hibernate -----
+  jpa:
+    hibernate:
+      # Flyway owns the schema; never let Hibernate create or modify
+      # anything in production. Dev keeps the same setting to avoid
+      # schema drift between environments.
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+        format_sql: false
+
+  # ----- Flyway -----
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: true
+
+  # ----- Jackson -----
+  # Jackson 3 (package tools.jackson.databind) is the default in
+  # Spring Boot 4. Defaults are sensible for our use case (UPPER_CASE
+  # enum names, ISO-8601 dates). No custom config needed for v1.
+  # If we need a customisation later, use spring.jackson3.* (NOT
+  # spring.jackson.*, which Boot 4 reserves for the Jackson 2
+  # compatibility layer that we do NOT have on the classpath).
+
+  # ----- MVC -----
+  mvc:
+    problemdetails:
+      # We use our own error envelope (PR2); Spring's
+      # ProblemDetail is not part of the wire contract.
+      enabled: false
+
+server:
+  port: 8080
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# =============================================================================
+# Application-specific config — typed via AppProperties (PR2)
+# =============================================================================
+app:
+  jwt:
+    secret: ${JWT_SECRET:dGVzdC1zZWNyZXQtdGVzdC1zZWNyZXQtdGVzdC1zZWNyZXQtdGVzdC1zZWNyZXQtdGVzdC1zZWNyZXQ=}
+    access-token-ttl: PT15M # ISO-8601 duration
+    refresh-token-ttl: P7D
+    issuer: logistics-saas
+    audience: logistics-saas-web
+
+  cookies:
+    secure: true
+    same-site: Strict
+    http-only: true
+
+  email:
+    enabled: false
+    from-address: no-reply@logistica.local
+    from-name: Logistics SaaS
+
+  rate-limit:
+    enabled: true
+    register-per-hour: 5
+    login-per-minute: 10
+    availability-per-minute: 30
+
+  lockout:
+    max-failed-attempts: 5
+    window-minutes: 15
+    lockout-minutes: 30
+
+  rls:
+    enabled: true
+
+  cors:
+    allowed-origins:
+      - http://localhost:4200
+
+  # ----- Three DataSources (ADR-0002) -----
+  # Each block has:
+  # .url / .username / .password -> JDBC-level (translated by DataSourceProperties)
+  # .configuration.* -> Hikari pool tuning
+  # Pool sizing lives under .configuration because Spring Boot's
+  # DataSourceProperties.initializeDataSourceBuilder() looks there.
+  datasource:
+    company:
+      url: ${COMPANY_DATABASE_URL:${DATABASE_URL}}
+      username: ${COMPANY_DATABASE_USER:app_user}
+      password: ${COMPANY_DATABASE_PASSWORD:app_user}
+      configuration:
+        maximum-pool-size: 5
+        minimum-idle: 1
+        pool-name: LogisticsCompanyPool
+        connection-timeout: 30000
+        validation-timeout: 5000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+    system:
+      url: ${SYSTEM_DATABASE_URL:${DATABASE_URL}}
+      username: ${SYSTEM_DATABASE_USER:app_admin}
+      password: ${SYSTEM_DATABASE_PASSWORD:app_admin}
+      configuration:
+        maximum-pool-size: 5
+        minimum-idle: 1
+        pool-name: LogisticsSystemPool
+        connection-timeout: 30000
+        validation-timeout: 5000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+    platform:
+      url: ${PLATFORM_DATABASE_URL:${DATABASE_URL}}
+      username: ${PLATFORM_DATABASE_USER:app_platform}
+      password: ${PLATFORM_DATABASE_PASSWORD:app_platform}
+      configuration:
+        maximum-pool-size: 5
+        minimum-idle: 1
+        pool-name: LogisticsPlatformPool
+        connection-timeout: 30000
+        validation-timeout: 5000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+
+  # ----- JPA per-pool -----
+  # None of the three inherit the global spring.jpa.* defaults
+  # because spring-boot auto-config only wires a single EMF; our
+  # three @Configuration classes bind their own JpaProperties beans
+  # via the @ConfigurationProperties prefix below. Tuning lives in
+  # application-dev.yml / application-prod.yml.
+  jpa:
+    company:
+      open-in-view: false
+      hibernate:
+        ddl-auto: validate
+    system:
+      open-in-view: false
+      hibernate:
+        ddl-auto: validate
+    platform:
+      open-in-view: false
+      hibernate:
+        ddl-auto: validate
+
+# =============================================================================
+# Sentry — runtime error tracking. Empty DSN disables Sentry.
+# =============================================================================
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: ${SPRING_PROFILES_ACTIVE:dev}
+  send-default-pii: false
+  traces-sample-rate: 0.2
+  enabled: false # flipped to true in application-prod.yml when DSN is set
+
+# =============================================================================
+# Logging — base level. Profile-specific logback config lives in
+# logback-spring.xml and switches to JSON output under prod.
+# =============================================================================
+logging:
+  level:
+    root: INFO
+    ar.com.logistics: INFO
+    org.springframework.security: INFO
+    org.hibernate.SQL: WARN
+    org.flywaydb: INFO
