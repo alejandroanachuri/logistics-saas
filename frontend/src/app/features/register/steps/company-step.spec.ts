@@ -13,6 +13,23 @@ import { ProvincesService } from '../../../core/services/provinces.service';
 import { AvailabilityService } from '../../../core/services/availability.service';
 
 /**
+ * Helper that builds a minimal WritableSignal-shaped mock
+ * for the {@code ProvincesService.error} signal exposed in
+ * the 2026-06-16 fix. Returns an object that is callable
+ * (the read API) AND has {@code .set} / {@code .update}
+ * methods (the write API). Tests that need to drive the
+ * error banner call {@code .set('...')} on the mock; tests
+ * that don't read the signal get {@code null} by default.
+ */
+function createMockSignal<T>(initial: T) {
+  let value = initial;
+  const callable = (() => value) as ((v?: T) => T) & { set: (v: T) => void; update: (fn: (v: T) => T) => void };
+  callable.set = (v: T) => { value = v; };
+  callable.update = (fn: (v: T) => T) => { value = fn(value); };
+  return callable;
+}
+
+/**
  * Host that wraps {@code CompanyStepComponent} so the spec
  * can drive the template through Angular's normal rendering
  * pipeline (the province {@code <select>}, the Siguiente
@@ -32,13 +49,13 @@ import { AvailabilityService } from '../../../core/services/availability.service
  * of 84 tests + 12 spec files, this brings the totals to
  * 96 tests / 13 spec files.
  */
-describe('CompanyStepComponent', () => {
-  const SAMPLE_PROVINCES = [
-    { code: 'BUENOS_AIRES', displayName: 'Buenos Aires' },
-    { code: 'CABA', displayName: 'Ciudad Autónoma de Buenos Aires' },
-    { code: 'CORDOBA', displayName: 'Córdoba' },
-  ];
+const SAMPLE_PROVINCES = [
+  { code: 'BUENOS_AIRES', displayName: 'Buenos Aires' },
+  { code: 'CABA', displayName: 'Ciudad Autónoma de Buenos Aires' },
+  { code: 'CORDOBA', displayName: 'Córdoba' },
+];
 
+describe('CompanyStepComponent', () => {
   let availabilityMock: {
     checkSlug: ReturnType<typeof vi.fn>;
     checkCuit: ReturnType<typeof vi.fn>;
@@ -88,7 +105,16 @@ describe('CompanyStepComponent', () => {
     };
     TestBed.configureTestingModule({
       providers: [
-        { provide: ProvincesService, useValue: { list: () => of(SAMPLE_PROVINCES) } },
+        { provide: ProvincesService, useValue: {
+          list: () => of(SAMPLE_PROVINCES),
+          // Mock the `error` signal added in the 2026-06-16
+          // fix. The mock is a real signal (so the template's
+          // call `provincesError()` works) seeded to `null`
+          // (no error). New tests for the error case update
+          // the signal via `setError` to drive the banner.
+          error: createMockSignal<string | null>(null),
+          refresh: () => of(SAMPLE_PROVINCES),
+        } },
         { provide: AvailabilityService, useValue: availabilityMock },
       ],
     });
@@ -339,6 +365,66 @@ describe('CompanyStepComponent', () => {
     expect(input.hasAttribute('aria-required')).toBe(false);
     const label = host.querySelector('label[for="company-commercial-name"]') as HTMLLabelElement;
     expect(label.querySelector('span[aria-hidden="true"]')).toBeNull();
+  });
+});
+
+describe('CompanyStepComponent — province load error UX (2026-06-16 fix)', () => {
+  // The 2026-06-16 fix closes gap #3 of the F1 wrap-up:
+  // "Province select API failure UX — empty list with no
+  // user-visible error if ProvincesService.list() fails."
+  // The fix surfaces a Spanish error banner + a "Reintentar"
+  // button when the HTTP call fails. The scenarios below
+  // exercise the 3 states: clean, error, error-then-retry.
+
+  // Note: these tests run in their own describe block so the
+  // mock of ProvincesService can include the new `error` signal
+  // without polluting the main form-validation describe block.
+
+  function renderWithProvincesError(errorMsg: string | null) {
+    const errorMock = createMockSignal<string | null>(errorMsg);
+    const provincesMock = {
+      list: vi.fn().mockReturnValue(of(SAMPLE_PROVINCES)),
+      error: errorMock,
+      refresh: vi.fn().mockReturnValue(of(SAMPLE_PROVINCES)),
+    };
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: ProvincesService, useValue: provincesMock },
+        { provide: AvailabilityService, useValue: { checkSlug: vi.fn(), checkCuit: vi.fn() } },
+      ],
+    });
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.autoDetectChanges();
+    return { fixture, errorMock, provincesMock };
+  }
+
+  it('does NOT render the error banner when the service has no error', () => {
+    const { fixture } = renderWithProvincesError(null);
+    const banner = (fixture.nativeElement as HTMLElement).querySelector(
+      '[data-testid="company-province-load-error"]',
+    );
+    expect(banner).toBeNull();
+  });
+
+  it('renders the error banner with the message when the service has an error', () => {
+    const { fixture } = renderWithProvincesError('No pudimos cargar las provincias. Probá de nuevo.');
+    const banner = (fixture.nativeElement as HTMLElement).querySelector(
+      '[data-testid="company-province-load-error"]',
+    ) as HTMLElement;
+    expect(banner).not.toBeNull();
+    expect(banner.textContent).toContain('No pudimos cargar las provincias');
+    expect(banner.getAttribute('role')).toBe('alert');
+  });
+
+  it('clicking the "Reintentar" button calls refresh() on the service', () => {
+    const { fixture, provincesMock } = renderWithProvincesError('network down');
+    const button = (fixture.nativeElement as HTMLElement).querySelector(
+      '[data-testid="company-province-retry"]',
+    ) as HTMLButtonElement;
+    expect(button).not.toBeNull();
+    button.click();
+    expect((provincesMock.refresh as ReturnType<typeof vi.fn>)).toHaveBeenCalledTimes(1);
   });
 });
 

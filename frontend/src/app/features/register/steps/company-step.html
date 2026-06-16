@@ -187,6 +187,23 @@
           @if (errorMessageFor(form.controls.address.controls.province); as msg) {
             <p id="company-address-province-error" role="alert" class="text-sm text-red-600">{{ msg }}</p>
           }
+          @if (provincesError(); as errMsg) {
+            <div
+              role="alert"
+              data-testid="company-province-load-error"
+              class="mt-2 flex items-center justify-between gap-3 rounded-md border border-amber-300 bg-amber-50 p-2 text-sm text-amber-900"
+            >
+              <span>{{ errMsg }}</span>
+              <button
+                type="button"
+                (click)="retryProvinces()"
+                data-testid="company-province-retry"
+                class="rounded-md border border-amber-400 bg-white px-2 py-1 text-xs font-semibold text-amber-900 hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-1"
+              >
+                Reintentar
+              </button>
+            </div>
+          }
         </div>
 
         <div class="space-y-1 sm:col-span-2">

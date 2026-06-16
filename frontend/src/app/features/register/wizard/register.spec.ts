@@ -77,7 +77,7 @@ describe('RegisterComponent', () => {
     checkCuit: ReturnType<typeof vi.fn>;
     checkUsername: ReturnType<typeof vi.fn>;
   };
-  let provincesMock: { list: ReturnType<typeof vi.fn> };
+  let provincesMock: { list: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
 
   function render(): {
     host: HTMLElement;
@@ -148,7 +148,15 @@ describe('RegisterComponent', () => {
       checkCuit: vi.fn().mockReturnValue(of({ available: true })),
       checkUsername: vi.fn().mockReturnValue(of({ available: true })),
     };
-    provincesMock = { list: vi.fn().mockReturnValue(of([])) };
+    provincesMock = {
+      list: vi.fn().mockReturnValue(of([])),
+      // The 2026-06-16 fix added an `error` signal to
+      // ProvincesService. Tests that don't exercise the
+      // error banner get a no-op signal (callable, returns
+      // null). Tests that do exercise the error path use
+      // signal() directly.
+      error: vi.fn().mockReturnValue(null),
+    };
     TestBed.configureTestingModule({
       imports: [RegisterComponent],
       providers: [

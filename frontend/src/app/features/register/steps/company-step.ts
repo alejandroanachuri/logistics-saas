@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
@@ -193,6 +193,38 @@ export class CompanyStepComponent {
    * PR12a Discovery #27).
    */
   readonly provinces = toSignal(this.provincesService.list(), { initialValue: [] });
+
+  /**
+   * Province-load error message (Spanish) or {@code null} when
+   * the list loaded cleanly. Surfaced in the template as a
+   * visible banner with a "Reintentar" button. Wired in the
+   * 2026-06-16 follow-up (closes gap #3 of the F1 wrap-up
+   * CHANGELOG: "Province select API failure UX — empty list
+   * with no user-visible error if {@code ProvincesService.list()}
+   * fails"). The signal is re-exported as a {@code computed}
+   * so the template can call it the same way it calls
+   * {@code provinces()} (the two signals share the same
+   * shape, even though they are owned by different
+   * services).
+   */
+  readonly provincesError = computed(() => this.provincesService.error());
+
+  /**
+   * User clicked the "Reintentar" button next to the province
+   * load error. Clears the cache, triggers a fresh HTTP call,
+   * and updates both the {@code provinces} signal and the
+   * {@code provincesError} signal (via the service's
+   * {@code refresh()} helper).
+   */
+  retryProvinces(): void {
+    // refresh() returns a new observable; the template's
+    // `provinces` toSignal re-subscribes via the new
+    // observable. The error signal is also re-driven by
+    // refresh() (it clears the error first, then sets it
+    // again on the next failure, or leaves it null on
+    // success).
+    this.provincesService.refresh().subscribe();
+  }
 
   constructor(private readonly fb: NonNullableFormBuilder) {
     // Address defaults (country = 'AR', province = 'BUENOS_AIRES')
