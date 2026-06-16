@@ -13,7 +13,75 @@ import { CompanyStepComponent } from '../steps/company-step';
 import { AdminStepComponent } from '../steps/admin-step';
 import { ConfirmationStepComponent } from '../steps/confirmation-step';
 import { RegistrationService } from '../../../core/services/registration.service';
-import { RegisterRequest, RegisterResponse } from '../../../core/types';
+import { ApiErrorEnvelope, RegisterRequest, RegisterResponse } from '../../../core/types';
+
+/**
+ * Maps a backend {@code RegisterRequest} field name
+ * (the keys of the {@code details} map in a 400
+ * {@code VALIDATION_ERROR} envelope) to the wizard
+ * step index that owns the field. Exported so
+ * {@code findTargetStep} and the spec can call it
+ * directly. The backend's {@code details} keys match
+ * the {@code formControlName} values in the step
+ * templates (no {@code company.}/ {@code admin.}{
+ * prefix).
+ */
+export const FIELD_TO_STEP: Record<string, number> = {
+  // step 0 — company data
+  legalName: 0,
+  commercialName: 0,
+  cuit: 0,
+  taxType: 0,
+  slug: 0,
+  contactEmail: 0,
+  contactPhone: 0,
+  // step 0 — address (treated as company.* by the backend)
+  country: 0,
+  province: 0,
+  city: 0,
+  line: 0,
+  number: 0,
+  floor: 0,
+  apartment: 0,
+  postalCode: 0,
+  // step 1 — admin user data
+  firstName: 1,
+  lastName: 1,
+  username: 1,
+  email: 1,
+  password: 1,
+  passwordConfirmation: 1,
+  // step 2 — consents (out of scope; included for the
+  // future follow-up that wires the ConfirmationStep)
+  acceptsTerms: 2,
+  acceptsPrivacy: 2,
+};
+
+/**
+ * Pure decision function: given the {@code details}
+ * map from a 400 {@code VALIDATION_ERROR} envelope,
+ * return the step index the wizard should jump to.
+ * Rule: the LOWEST step index among the affected
+ * fields wins (so the user lands at the earliest
+ * step with a problem). Empty / unknown-only maps
+ * default to 0.
+ */
+export function findTargetStep(details: Record<string, string> | undefined): number {
+  if (!details) {
+    return 0;
+  }
+  let lowest: number | null = null;
+  for (const field of Object.keys(details)) {
+    const step = FIELD_TO_STEP[field];
+    if (step === undefined) {
+      continue;
+    }
+    if (lowest === null || step < lowest) {
+      lowest = step;
+    }
+  }
+  return lowest ?? 0;
+}
 
 /**
  * The {@code /register} F1 page. Standalone Angular 21
@@ -38,6 +106,19 @@ import { RegisterRequest, RegisterResponse } from '../../../core/types';
  * those are owned by the step components (per the
  * PR12b1 / PR12b2 convention) and the stepper
  * reaches into them via {@code @ViewChild}.
+ *
+ * <p>Gap #1 (F1 wrap-up CHANGELOG) — server-side
+ * validation errors: when the backend returns 400
+ * with {@code code = VALIDATION_ERROR} and a
+ * {@code details} map, the wizard jumps back to the
+ * step that owns the first affected field, stores
+ * the per-field messages in {@code fieldErrors},
+ * and keeps the envelope's {@code message} in the
+ * top-level {@code submitError} aria-live region as a
+ * summary. The per-field rendering is owned by the
+ * step components; the wizard only projects the
+ * relevant subset via
+ * {@code projectedFieldErrorsForStep}.
  */
 @Component({
   selector: 'app-register',
@@ -55,6 +136,19 @@ export class RegisterComponent {
   readonly isLoading = signal(false);
   readonly submitError = signal<string | null>(null);
   readonly successResponse = signal<RegisterResponse | null>(null);
+
+  /**
+   * Per-field server-side validation errors, keyed by
+   * the backend's flat {@code RegisterRequest} field
+   * name. Populated by the {@code submit()} error
+   * handler when the backend returns 400 with
+   * {@code code = VALIDATION_ERROR}; cleared at the
+   * start of every submit and on a 201 success. The
+   * wizard's template projects a per-step subset via
+   * {@code projectedFieldErrorsForStep}. Gap #1 of the
+   * F1 wrap-up CHANGELOG.
+   */
+  readonly fieldErrors = signal<Record<string, string>>({});
 
   /**
    * Tick signal that increments on every form
@@ -176,6 +270,12 @@ export class RegisterComponent {
 
     this.isLoading.set(true);
     this.submitError.set(null);
+    // Reset the per-field errors from any previous failed
+    // submit so the success path starts clean. The error
+    // handler re-populates this when the server returns
+    // 400 with `details`; a 5xx or network error leaves
+    // the record empty.
+    this.fieldErrors.set({});
 
     const companyValue = this.companyStep.form.value;
     const adminValue = this.adminStep.form.value;
@@ -220,9 +320,90 @@ export class RegisterComponent {
       },
       error: (err: unknown) => {
         this.isLoading.set(false);
-        this.submitError.set(this.formatSubmitError(err));
+        this.handleSubmitError(err);
       },
     });
+  }
+
+  /**
+   * Projection helper. Returns the subset of
+   * {@code fieldErrors()} whose keys belong to the
+   * given step. The wizard's template calls this once
+   * per render to project the right slice into each
+   * step's {@code [fieldErrors]} input. Method (not
+   * computed) because the template re-evaluates it
+   * with the current step on every CD cycle.
+   */
+  projectedFieldErrorsForStep(stepIndex: number): Record<string, string> {
+    const projected: Record<string, string> = {};
+    for (const [field, message] of Object.entries(this.fieldErrors())) {
+      if (FIELD_TO_STEP[field] === stepIndex) {
+        projected[field] = message;
+      }
+    }
+    return projected;
+  }
+
+  /**
+   * Error-handling seam for {@code submit()}. Splits
+   * the 400-with-details path (gap #1) from every other
+   * error. For 400 with {@code code = VALIDATION_ERROR}:
+   * populate {@code fieldErrors}, jump
+   * {@code currentStepIndex} to the lowest step that
+   * owns an affected field, and set {@code submitError}
+   * to the envelope {@code message} (top-level
+   * summary). The step components then render each
+   * per-field message inline through their existing
+   * {@code errorMessageFor} helper.
+   */
+  private handleSubmitError(err: unknown): void {
+    const validationDetails = this.extractValidationDetails(err);
+    if (validationDetails !== null) {
+      this.fieldErrors.set(validationDetails);
+      this.currentStepIndex.set(findTargetStep(validationDetails));
+    } else {
+      this.fieldErrors.set({});
+    }
+    this.submitError.set(this.formatSubmitError(err));
+  }
+
+  /**
+   * Pulls the {@code details} map from a 400
+   * {@code VALIDATION_ERROR} envelope. Returns
+   * {@code null} if the error is not a 400 with the
+   * expected shape (409, 5xx, network failure) so the
+   * caller falls through to the legacy top-level-only
+   * path.
+   */
+  private extractValidationDetails(err: unknown): Record<string, string> | null {
+    if (!err || typeof err !== 'object' || !('status' in err)) {
+      return null;
+    }
+    const status = (err as { status: number }).status;
+    if (status !== 400) {
+      return null;
+    }
+    const body = (err as unknown as { error: unknown }).error;
+    if (!body || typeof body !== 'object' || !('error' in body)) {
+      return null;
+    }
+    const envelope = (body as ApiErrorEnvelope).error;
+    if (!envelope || envelope.code !== 'VALIDATION_ERROR') {
+      return null;
+    }
+    const details = envelope.details;
+    if (!details || typeof details !== 'object') {
+      return null;
+    }
+    // Coerce to a string-keyed, string-valued record to
+    // match the `fieldErrors` signal's contract; the
+    // backend always returns string values but a future
+    // change shouldn't crash the wizard.
+    const out: Record<string, string> = {};
+    for (const [k, v] of Object.entries(details)) {
+      out[k] = typeof v === 'string' ? v : String(v);
+    }
+    return out;
   }
 
   goToLogin(): void {

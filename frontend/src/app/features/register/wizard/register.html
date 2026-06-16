@@ -92,10 +92,15 @@
       validator (per PR12b2 Discovery #34).
     -->
     <div data-testid="step-body-company" class="mt-4" [class.hidden]="currentStepIndex() !== 0">
-      <app-company-step></app-company-step>
+      <app-company-step
+        [fieldErrors]="projectedFieldErrorsForStep(0)"
+      ></app-company-step>
     </div>
     <div data-testid="step-body-admin" class="mt-4" [class.hidden]="currentStepIndex() !== 1">
-      <app-admin-step [tenantSlug]="tenantSlug()"></app-admin-step>
+      <app-admin-step
+        [tenantSlug]="tenantSlug()"
+        [fieldErrors]="projectedFieldErrorsForStep(1)"
+      ></app-admin-step>
     </div>
     <div data-testid="step-body-confirmation" class="mt-4" [class.hidden]="currentStepIndex() !== 2">
       <app-confirmation-step
