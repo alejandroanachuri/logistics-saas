@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 
-import { RegisterComponent } from './register';
+import { RegisterComponent, FIELD_TO_STEP, findTargetStep } from './register';
 import { RegistrationService } from '../../../core/services/registration.service';
 import { AvailabilityService } from '../../../core/services/availability.service';
 import { ProvincesService } from '../../../core/services/provinces.service';
@@ -27,6 +27,24 @@ function makeApiHttpError(
   (err as unknown as { statusText: string }).statusText = 'Error';
   (err as unknown as { error: ApiHttpError['error'] }).error = body;
   return err;
+}
+
+/**
+ * Build a 400 VALIDATION_ERROR envelope mock. Used by
+ * every gap #1 scenario; compact form keeps the
+ * per-scenario setup tight.
+ */
+function mockValidationError(details: Record<string, string>) {
+  return throwError(
+    () =>
+      makeApiHttpError(400, {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Revisá los campos marcados en rojo.',
+          details,
+        },
+      }),
+  );
 }
 
 /**
@@ -134,6 +152,31 @@ describe('RegisterComponent', () => {
 
   async function settleCompanyForm(): Promise<void> {
     await new Promise((r) => setTimeout(r, 400));
+  }
+
+  /**
+   * Drive the wizard from step 0 to step 2 (confirmation)
+   * with both consents checked. The 5 gap #1 scenarios
+   * all start from "ready to submit" so this helper
+   * keeps the test bodies focused on the assertion.
+   */
+  async function walkToConfirmation(
+    host: HTMLElement,
+    component: RegisterComponent,
+    refresh: () => void,
+  ): Promise<void> {
+    fillCompanyForm(component);
+    await settleCompanyForm();
+    refresh();
+    qsHost<HTMLButtonElement>(host, 'button[data-testid="stepper-next"]')!.click();
+    refresh();
+    await fillAdminForm(component);
+    refresh();
+    qsHost<HTMLButtonElement>(host, 'button[data-testid="stepper-next"]')!.click();
+    refresh();
+    component.confirmationStep!.form.controls.acceptsTerms.setValue(true);
+    component.confirmationStep!.form.controls.acceptsPrivacy.setValue(true);
+    refresh();
   }
 
   function qsHost<T extends Element = Element>(host: HTMLElement, selector: string): T | null {
@@ -352,6 +395,175 @@ describe('RegisterComponent', () => {
     expect(nextBtn).toBeNull();
     expect(prevBtn).toBeNull();
     expect(submitBtn).toBeNull();
+  });
+
+  // -------- 10..14. gap #1 — 400-with-details jump-to-step + per-field surfacing --------
+  //
+  // The F1 wrap-up CHANGELOG flagged this gap. The
+  // scenarios cover all 5 documented edges of the
+  // mapping plus a "retry on 201" that proves the
+  // success path clears fieldErrors.
+
+  // 10. 400 with details.slug → jump to step 0 + slug shows server message.
+
+  it('400 with details.slug: jumps back to step 0 and surfaces the server message on the slug field', async () => {
+    registrationMock.submit.mockReturnValue(mockValidationError({ slug: 'Este slug ya está en uso.' }));
+    const { host, component, refresh } = render();
+    await walkToConfirmation(host, component, refresh);
+    expect(component.currentStepIndex()).toBe(2);
+    qsHost<HTMLButtonElement>(host, 'button[data-testid="submit-create"]')!.click();
+    refresh();
+    expect(component.currentStepIndex()).toBe(0);
+    expect(component.fieldErrors()).toEqual({ slug: 'Este slug ya está en uso.' });
+    const slugError = host.querySelector('#company-slug-error');
+    expect(slugError).toBeTruthy();
+    expect(slugError!.textContent?.trim()).toBe('Este slug ya está en uso.');
+    const region = qsHost<HTMLElement>(host, '[data-testid="register-error"]');
+    expect((region!.textContent ?? '').trim()).toContain('Revisá los campos marcados en rojo.');
+  });
+
+  // 11. 400 with details.username → jump to step 1 + username shows server message.
+
+  it('400 with details.username: jumps back to step 1 and surfaces the server message on the username field', async () => {
+    registrationMock.submit.mockReturnValue(mockValidationError({ username: 'Este usuario ya está en uso.' }));
+    const { host, component, refresh } = render();
+    await walkToConfirmation(host, component, refresh);
+    qsHost<HTMLButtonElement>(host, 'button[data-testid="submit-create"]')!.click();
+    refresh();
+    expect(component.currentStepIndex()).toBe(1);
+    expect(component.fieldErrors()).toEqual({ username: 'Este usuario ya está en uso.' });
+    const usernameError = host.querySelector('#admin-username-error');
+    expect(usernameError).toBeTruthy();
+    expect(usernameError!.textContent?.trim()).toBe('Este usuario ya está en uso.');
+  });
+
+  // 12. 400 with details.password + passwordConfirmation → jump to step 1 + both fields show messages.
+
+  it('400 with details.password + details.passwordConfirmation: jumps to step 1 and surfaces BOTH server messages', async () => {
+    registrationMock.submit.mockReturnValue(
+      mockValidationError({
+        password: 'La contraseña es muy débil.',
+        passwordConfirmation: 'Las contraseñas no coinciden.',
+      }),
+    );
+    const { host, component, refresh } = render();
+    await walkToConfirmation(host, component, refresh);
+    qsHost<HTMLButtonElement>(host, 'button[data-testid="submit-create"]')!.click();
+    refresh();
+    expect(component.currentStepIndex()).toBe(1);
+    expect(component.fieldErrors()).toEqual({
+      password: 'La contraseña es muy débil.',
+      passwordConfirmation: 'Las contraseñas no coinciden.',
+    });
+    const passwordError = host.querySelector('#admin-password-error');
+    const confirmationError = host.querySelector('#admin-password-confirmation-error');
+    expect(passwordError).toBeTruthy();
+    expect(passwordError!.textContent?.trim()).toBe('La contraseña es muy débil.');
+    expect(confirmationError).toBeTruthy();
+    expect(confirmationError!.textContent?.trim()).toBe('Las contraseñas no coinciden.');
+  });
+
+  // 13. 400 with empty details → jump to step 0 + no per-field error renders.
+
+  it('400 with empty details: jumps to step 0 and only the top-level banner renders (no per-field error)', async () => {
+    registrationMock.submit.mockReturnValue(mockValidationError({}));
+    const { host, component, refresh } = render();
+    await walkToConfirmation(host, component, refresh);
+    qsHost<HTMLButtonElement>(host, 'button[data-testid="submit-create"]')!.click();
+    refresh();
+    expect(component.currentStepIndex()).toBe(0);
+    expect(component.fieldErrors()).toEqual({});
+    const region = qsHost<HTMLElement>(host, '[data-testid="register-error"]');
+    expect((region!.textContent ?? '').trim()).toContain('Revisá los campos marcados en rojo.');
+    expect(host.querySelector('#company-slug-error')).toBeNull();
+    expect(host.querySelector('#admin-username-error')).toBeNull();
+  });
+
+  // 14. Retry: after a 400, a subsequent 201 clears fieldErrors and shows the success screen.
+
+  it('retry: after a 400, a subsequent 201 clears fieldErrors and shows the success screen', async () => {
+    registrationMock.submit
+      .mockReturnValueOnce(mockValidationError({ slug: 'Este slug ya está en uso.' }))
+      .mockReturnValueOnce(
+        of({ tenantId: 't1', slug: 'acme', adminUserId: 'u1', adminUsername: 'ada' }),
+      );
+    const { host, component, refresh } = render();
+    await walkToConfirmation(host, component, refresh);
+    // First submit → 400. Wizard jumps back to step 0.
+    qsHost<HTMLButtonElement>(host, 'button[data-testid="submit-create"]')!.click();
+    refresh();
+    expect(component.currentStepIndex()).toBe(0);
+    expect(component.fieldErrors()).toEqual({ slug: 'Este slug ya está en uso.' });
+    // User walks forward to step 2 again (form values
+    // are still in place, Siguiente just re-enables).
+    qsHost<HTMLButtonElement>(host, 'button[data-testid="stepper-next"]')!.click();
+    refresh();
+    qsHost<HTMLButtonElement>(host, 'button[data-testid="stepper-next"]')!.click();
+    refresh();
+    // Second submit → 201. The success path must clear
+    // fieldErrors before the 201 lands.
+    qsHost<HTMLButtonElement>(host, 'button[data-testid="submit-create"]')!.click();
+    refresh();
+    expect(component.fieldErrors()).toEqual({});
+    expect(component.successResponse()).toEqual({
+      tenantId: 't1',
+      slug: 'acme',
+      adminUserId: 'u1',
+      adminUsername: 'ada',
+    });
+  });
+});
+
+describe('RegisterComponent — gap #1 pure helpers (FIELD_TO_STEP + findTargetStep)', () => {
+  // Direct unit tests for the exported pure functions.
+  // These keep the routing logic testable WITHOUT
+  // instantiating Angular, which is the whole point of
+  // the "extract-before-mock" rule (see strict-tdd.md).
+
+  it('FIELD_TO_STEP maps the company.* fields to step 0', () => {
+    expect(FIELD_TO_STEP['legalName']).toBe(0);
+    expect(FIELD_TO_STEP['cuit']).toBe(0);
+    expect(FIELD_TO_STEP['slug']).toBe(0);
+    expect(FIELD_TO_STEP['contactEmail']).toBe(0);
+    expect(FIELD_TO_STEP['province']).toBe(0);
+    expect(FIELD_TO_STEP['postalCode']).toBe(0);
+  });
+
+  it('FIELD_TO_STEP maps the admin.* fields to step 1', () => {
+    expect(FIELD_TO_STEP['firstName']).toBe(1);
+    expect(FIELD_TO_STEP['username']).toBe(1);
+    expect(FIELD_TO_STEP['password']).toBe(1);
+    expect(FIELD_TO_STEP['passwordConfirmation']).toBe(1);
+  });
+
+  it('FIELD_TO_STEP maps the consent fields to step 2 (out of scope but documented)', () => {
+    expect(FIELD_TO_STEP['acceptsTerms']).toBe(2);
+    expect(FIELD_TO_STEP['acceptsPrivacy']).toBe(2);
+  });
+
+  it('findTargetStep returns 0 when a company field is the first affected', () => {
+    expect(findTargetStep({ slug: 'taken' })).toBe(0);
+    expect(findTargetStep({ cuit: 'bad', slug: 'taken' })).toBe(0);
+  });
+
+  it('findTargetStep returns 1 when an admin field is the first affected', () => {
+    expect(findTargetStep({ username: 'taken' })).toBe(1);
+    expect(findTargetStep({ email: 'bad' })).toBe(1);
+  });
+
+  it('findTargetStep returns the LOWEST step when multiple fields span multiple steps', () => {
+    // The "first affected" rule means the lowest step
+    // index wins so the user always lands at the earliest
+    // step with a problem.
+    expect(findTargetStep({ slug: 'taken', password: 'weak' })).toBe(0);
+  });
+
+  it('findTargetStep returns 0 when the details map is empty (safe default)', () => {
+    expect(findTargetStep({})).toBe(0);
+  });
+
+  it('findTargetStep returns 0 for unknown field names (safe default)', () => {
+    expect(findTargetStep({ somethingUnknown: 'x' })).toBe(0);
   });
 });
 

@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { ComponentFixture } from '@angular/core/testing';
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
 
@@ -65,6 +65,7 @@ describe('CompanyStepComponent', () => {
   function render(): {
     host: HTMLElement;
     component: CompanyStepComponent;
+    fixture: ComponentFixture<HostComponent>;
     refresh: () => void;
   } {
     const fixture: ComponentFixture<HostComponent> = TestBed.createComponent(HostComponent);
@@ -73,6 +74,7 @@ describe('CompanyStepComponent', () => {
     return {
       host: fixture.nativeElement as HTMLElement,
       component,
+      fixture,
       refresh: () => fixture.detectChanges(),
     };
   }
@@ -366,6 +368,56 @@ describe('CompanyStepComponent', () => {
     const label = host.querySelector('label[for="company-commercial-name"]') as HTMLLabelElement;
     expect(label.querySelector('span[aria-hidden="true"]')).toBeNull();
   });
+
+  // -------- gap #1 (server-error field surfacing) --------
+  //
+  // The 3 scenarios below cover the new `fieldErrors`
+  // signal input. Server-side 400 VALIDATION_ERROR
+  // messages take precedence over local validator
+  // errors AND are visible regardless of touched/dirty
+  // state (the user needs to see them immediately).
+
+  it('errorMessageFor: returns the server error from fieldErrors() for the matching control', () => {
+    const { component, fixture } = render();
+    // Server says slug is taken; the field is pristine
+    // (untouched) — the server error must still be
+    // surfaced immediately, no markAsTouched needed.
+    fixture.componentInstance.fieldErrors.set({ slug: 'Este slug ya está en uso.' });
+    fixture.detectChanges();
+    expect(component.errorMessageFor(component.form.controls.slug)).toBe(
+      'Este slug ya está en uso.',
+    );
+  });
+
+  it('errorMessageFor: server error wins over the local validator error for the same control', () => {
+    const { component, fixture } = render();
+    // Both: local "required" + server "taken". Server wins.
+    component.form.controls.slug.setValue('');
+    component.form.controls.slug.markAsTouched();
+    fixture.componentInstance.fieldErrors.set({ slug: 'Este slug ya está en uso.' });
+    fixture.detectChanges();
+    expect(component.errorMessageFor(component.form.controls.slug)).toBe(
+      'Este slug ya está en uso.',
+    );
+  });
+
+  it('errorMessageFor wiring: renders the server error <p role="alert"> for a pristine slug field with fieldErrors populated', () => {
+    const { host, component, fixture, refresh } = render();
+    fixture.componentInstance.fieldErrors.set({ slug: 'Este slug ya está en uso.' });
+    refresh();
+    const errorEl = host.querySelector('#company-slug-error');
+    expect(errorEl).toBeTruthy();
+    expect(errorEl!.getAttribute('role')).toBe('alert');
+    expect(errorEl!.textContent?.trim()).toBe('Este slug ya está en uso.');
+    // The input must carry aria-invalid="true" and the
+    // matching aria-describedby so AT pairs them up
+    // (server error = visible immediately, no touch needed).
+    const input = host.querySelector('#company-slug') as HTMLInputElement;
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(input.getAttribute('aria-describedby')).toBe('company-slug-error');
+    // The red border is applied via [class.border-red-500].
+    expect(component.shouldShowError(component.form.controls.slug)).toBe(true);
+  });
 });
 
 describe('CompanyStepComponent — province load error UX (2026-06-16 fix)', () => {
@@ -431,10 +483,23 @@ describe('CompanyStepComponent — province load error UX (2026-06-16 fix)', () 
 /**
  * Host component for spec-side rendering. Mirrors the
  * pattern in {@code password-strength-indicator.spec.ts}.
+ * The {@code fieldErrors} signal is bound through the
+ * template so the spec can drive the gap #1 server-error
+ * scenarios end-to-end (helper + template wiring).
  */
 @Component({
   standalone: true,
   imports: [CompanyStepComponent],
-  template: `<app-company-step></app-company-step>`,
+  template: `<app-company-step [fieldErrors]="fieldErrors()"></app-company-step>`,
 })
-class HostComponent {}
+class HostComponent {
+  /**
+   * Writable signal of the per-field server errors.
+   * Defaults to an empty record so the existing
+   * PR13 scenarios (which don't care about server
+   * errors) render in their clean baseline state.
+   * The gap #1 scenarios update it via
+   * {@code fixture.componentInstance.fieldErrors.set(...)}.
+   */
+  readonly fieldErrors = signal<Record<string, string>>({});
+}

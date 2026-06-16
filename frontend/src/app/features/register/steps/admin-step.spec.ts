@@ -1,5 +1,5 @@
 import { TestBed, ComponentFixture } from '@angular/core/testing';
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 
@@ -275,6 +275,59 @@ describe('AdminStepComponent', () => {
       expect(asterisk!.textContent?.trim()).toBe('*');
     }
   });
+
+  // -------- gap #1 (server-error field surfacing) --------
+  //
+  // The 3 scenarios below cover the new `fieldErrors`
+  // signal input. Server-side 400 VALIDATION_ERROR
+  // messages take precedence over local validator
+  // errors AND are visible regardless of touched/dirty
+  // state.
+
+  it('errorMessageFor: returns the server error from fieldErrors() for the matching control', () => {
+    const { component, fixture } = render();
+    // Server says the username is taken; the field is
+    // pristine (untouched) — the server error must still
+    // be surfaced immediately, no markAsTouched needed.
+    fixture.componentInstance.fieldErrors.set({ username: 'Este usuario ya existe.' });
+    fixture.detectChanges();
+    expect(component.errorMessageFor(component.form.controls.username)).toBe(
+      'Este usuario ya existe.',
+    );
+  });
+
+  it('errorMessageFor: server error wins over the local validator error for the same control', () => {
+    const { component, fixture } = render();
+    // Both: local "mismatch" (passwordConfirmation !=
+    // password) + server "no coinciden" — server wins.
+    component.form.controls.password.setValue('MiPassw0rd!Seguro');
+    component.form.controls.passwordConfirmation.setValue('OtraCosa');
+    component.form.controls.passwordConfirmation.markAsTouched();
+    fixture.componentInstance.fieldErrors.set({
+      passwordConfirmation: 'Las contraseñas no coinciden.',
+    });
+    fixture.detectChanges();
+    expect(component.errorMessageFor(component.form.controls.passwordConfirmation)).toBe(
+      'Las contraseñas no coinciden.',
+    );
+  });
+
+  it('errorMessageFor wiring: renders the server error <p role="alert"> for a pristine username field with fieldErrors populated', () => {
+    const { host, component, fixture, refresh } = render();
+    fixture.componentInstance.fieldErrors.set({ username: 'Este usuario ya existe.' });
+    refresh();
+    const errorEl = host.querySelector('#admin-username-error');
+    expect(errorEl).toBeTruthy();
+    expect(errorEl!.getAttribute('role')).toBe('alert');
+    expect(errorEl!.textContent?.trim()).toBe('Este usuario ya existe.');
+    // The input must carry aria-invalid="true" and the
+    // matching aria-describedby (server error = visible
+    // immediately, no touch needed).
+    const input = host.querySelector('#admin-username') as HTMLInputElement;
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(input.getAttribute('aria-describedby')).toBe('admin-username-error');
+    expect(component.shouldShowError(component.form.controls.username)).toBe(true);
+  });
 });
 
 /**
@@ -332,15 +385,27 @@ describe('matchValidator', () => {
 /**
  * Host component for spec-side rendering. Mirrors the
  * pattern in {@code password-strength-indicator.spec.ts}
- * and {@code company-step.spec.ts}.
+ * and {@code company-step.spec.ts}. The
+ * {@code fieldErrors} signal is bound through the
+ * template so the spec can drive the gap #1 server-error
+ * scenarios end-to-end (helper + template wiring).
  */
 @Component({
   standalone: true,
   imports: [AdminStepComponent],
-  template: `<app-admin-step [tenantSlug]="tenantSlug"></app-admin-step>`,
+  template: `<app-admin-step [tenantSlug]="tenantSlug" [fieldErrors]="fieldErrors()"></app-admin-step>`,
 })
 class HostComponent {
   tenantSlug = 'acme';
+  /**
+   * Writable signal of the per-field server errors.
+   * Defaults to an empty record so the existing PR13
+   * scenarios (which don't care about server errors)
+   * render in their clean baseline state. The gap #1
+   * scenarios update it via
+   * {@code fixture.componentInstance.fieldErrors.set(...)}.
+   */
+  readonly fieldErrors = signal<Record<string, string>>({});
 }
 
 // Unused import guard — keeps the `throwError` import in
