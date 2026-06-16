@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
@@ -153,6 +153,37 @@ export type CompanyFormGroup = FormGroup<{
 }>;
 
 /**
+ * Pure helper: extracts the form control's name from
+ * its parent's {@code controls} Record. Returns
+ * {@code null} for a control not attached to a form
+ * (e.g. the validator's bare {@code AbstractControl}).
+ *
+ * <p>Used by the gap #1 server-error wiring: the step
+ * component's {@code errorMessageFor} /
+ * {@code shouldShowError} helpers look up the
+ * {@code fieldErrors} record by the control's name so
+ * the template stays unchanged (no second arg on every
+ * call site).
+ */
+function controlName(control: AbstractControl | null): string | null {
+  if (!control || !control.parent) {
+    return null;
+  }
+  const parent = control.parent as unknown as {
+    controls?: Record<string, AbstractControl>;
+  };
+  if (!parent.controls) {
+    return null;
+  }
+  for (const [name, sibling] of Object.entries(parent.controls)) {
+    if (sibling === control) {
+      return name;
+    }
+  }
+  return null;
+}
+
+/**
  * Step 1 of the F1 register wizard. Renders a typed
  * reactive {@code FormGroup} with 15 controls (7 root
  * controls + 8 nested address controls) and the supporting
@@ -183,6 +214,29 @@ export type CompanyFormGroup = FormGroup<{
 })
 export class CompanyStepComponent {
   readonly form: CompanyFormGroup;
+
+  /**
+   * Per-field server-side validation errors, keyed by
+   * the backend's flat {@code RegisterRequest} field
+   * name (e.g. {@code "slug"}, {@code "cuit"}). Bound
+   * by the wizard ({@code RegisterComponent}) from the
+   * 400 {@code VALIDATION_ERROR} envelope's
+   * {@code details} map, projected to the keys owned by
+   * this step via
+   * {@code projectedFieldErrorsForStep(0)}.
+   *
+   * <p>Defaults to an empty record so the step renders
+   * normally when the wizard has no server errors to
+   * show. When non-empty, the matching input renders
+   * the server's message inline via
+   * {@code errorMessageFor} (the server message takes
+   * precedence over the local sync / async validator
+   * errors).
+   *
+   * <p>Gap #1 of the F1 wrap-up CHANGELOG: the
+   * 400-with-`details.field` jump-to-step fix.
+   */
+  readonly fieldErrors = input<Record<string, string>>({});
 
   private readonly provincesService = inject(ProvincesService);
   private readonly availability = inject(AvailabilityService);
@@ -296,8 +350,25 @@ export class CompanyStepComponent {
    * order of the validators on each control; the first
    * match wins. The mapping covers all sync + async error
    * keys that any company-step control can produce.
+   *
+   * <p>Server-side errors (gap #1, 400
+   * {@code VALIDATION_ERROR} envelope's
+   * {@code details} map) take precedence over the local
+   * sync / async validator errors and are visible
+   * regardless of {@code touched} / {@code dirty} state
+   * (the user needs to see them immediately, without
+   * having to blur the field first).
    */
   errorMessageFor(control: AbstractControl | null): string | null {
+    // 1. Server-side error takes precedence.
+    const name = controlName(control);
+    if (name) {
+      const serverMsg = this.fieldErrors()[name];
+      if (serverMsg) {
+        return serverMsg;
+      }
+    }
+    // 2. Local validator error (gated on touched/dirty).
     if (!control || !control.errors) return null;
     if (!this.shouldShowError(control)) return null;
     const errs = control.errors;
@@ -316,14 +387,22 @@ export class CompanyStepComponent {
 
   /**
    * True when the control is invalid AND has been
-   * touched or dirtied. Shared by the template's
-   * {@code aria-invalid}, {@code aria-describedby}, and
-   * {@code border-red-500} bindings so the three stay in
-   * lock-step. Extracted from the helper so the template
-   * can call the cheap boolean without rebuilding the
-   * error string.
+   * touched or dirtied — OR when the server has a
+   * validation error for the control's field name
+   * (gap #1: the 400 {@code VALIDATION_ERROR} path).
+   * Shared by the template's {@code aria-invalid},
+   * {@code aria-describedby}, and
+   * {@code border-red-500} bindings so the three stay
+   * in lock-step. Extracted from the helper so the
+   * template can call the cheap boolean without
+   * rebuilding the error string.
    */
   shouldShowError(control: AbstractControl | null): boolean {
+    // Server-side error: visible regardless of touched state.
+    const name = controlName(control);
+    if (name && this.fieldErrors()[name]) {
+      return true;
+    }
     if (!control) return false;
     return control.invalid && (control.touched || control.dirty);
   }
