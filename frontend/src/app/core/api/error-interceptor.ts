@@ -87,6 +87,43 @@ function parseEnvelope(body: unknown): ApiErrorEnvelope | null {
 }
 
 /**
+ * Builds the {@link ApiHttpError} that the {@code errorInterceptor}
+ * re-throws. Projects the original {@code HttpErrorResponse}'s
+ * {@code headers} so call sites can read response metadata
+ * (e.g. {@code Retry-After} for {@code ACCOUNT_LOCKED} minute
+ * count). The {@code HttpHeaders} object exposes
+ * {@code .get(name): string | null} which is the shape our
+ * typed error contract requires.
+ *
+ * <p>v1 of the interceptor did not project headers and
+ * {@link LoginService.extractErrorCopy} had to fall back to
+ * {@code details.retryAfterSeconds} for the ACCOUNT_LOCKED
+ * minutes derivation. F1 end-to-end testing of the login
+ * account-lockout path revealed that some backends send
+ * {@code Retry-After} only as a header (not duplicated into
+ * the envelope body), so the fallback was unreliable. This
+ * helper fixes that gap by always projecting {@code headers}.
+ */
+function projectApiHttpError(
+  err: HttpErrorResponse,
+  envelope: ApiErrorEnvelope | { code: 'NETWORK_ERROR'; message: string },
+): {
+  status: number;
+  statusText: string;
+  url?: string;
+  error: ApiErrorEnvelope | { code: 'NETWORK_ERROR'; message: string };
+  headers: { get(name: string): string | null };
+} {
+  return {
+    status: err.status,
+    statusText: err.statusText,
+    url: err.url ?? undefined,
+    error: envelope,
+    headers: err.headers,
+  };
+}
+
+/**
  * {@code errorInterceptor} — parses the backend's canonical
  * error envelope, normalises network failures, and performs
  * the 401 refresh-and-retry flow. A 401 from a non-bootstrap
@@ -103,10 +140,7 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
       // 1) Network failure: status === 0 with a ProgressEvent
       //    error is a connectivity problem, not a server error.
       if (err instanceof HttpErrorResponse && err.status === 0) {
-        return throwError(() => ({
-          ...err,
-          error: NETWORK_ERROR,
-        }));
+        return throwError(() => projectApiHttpError(err, NETWORK_ERROR));
       }
       if (!(err instanceof HttpErrorResponse)) {
         return throwError(() => err);
@@ -125,11 +159,12 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
       //    here, because at this layer we only see the
       //    original 401.
       if (err.status !== 401 || shouldNotRetry(req.url)) {
-        return throwError(() => ({
-          ...err,
-          status: err.status,
-          error: envelope ?? { error: { code: 'UNKNOWN', message: localized } },
-        }));
+        return throwError(() =>
+          projectApiHttpError(
+            err,
+            envelope ?? { error: { code: 'UNKNOWN', message: localized } },
+          ),
+        );
       }
 
       // 4) 401 on a refreshable endpoint: try exactly one
@@ -153,10 +188,12 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
             router.navigate(['/login'], {
               queryParams: { returnUrl: returnUrl || '/' },
             });
-            return throwError(() => ({
-              ...err,
-              error: envelope ?? { error: { code: 'UNAUTHENTICATED', message: 'Sesión expirada' } },
-            }));
+            return throwError(() =>
+              projectApiHttpError(
+                err,
+                envelope ?? { error: { code: 'UNAUTHENTICATED', message: 'Sesión expirada' } },
+              ),
+            );
           }
           // Refresh succeeded — the new cookies are now in the
           // jar. Retry the original request.

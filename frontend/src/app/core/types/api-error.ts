@@ -30,19 +30,19 @@ export interface ApiErrorEnvelope {
  * {@code error} so call sites can do
  * {@code (err.error as ApiErrorEnvelope).error.code}.
  *
- * <p>{@code headers} is optional because v1 of the
- * {@code errorInterceptor} does not yet project response
- * headers onto the rethrown error. Call sites that need
- * response headers (e.g. {@code LoginService} reading
- * {@code Retry-After} for {@code ACCOUNT_LOCKED} minutes)
- * type-narrow with a {@code { get(k): string | null } }
- * minimal contract; a future PR will surface the full
- * {@code HttpHeaders} from the interceptor.
+ * <p>{@code headers} is projected from the original
+ * {@code HttpErrorResponse} by the interceptor (since the
+ * 2026-06-16 fix). Call sites that need response headers
+ * (e.g. {@code LoginService} reading {@code Retry-After}
+ * for {@code ACCOUNT_LOCKED} minutes) can rely on
+ * {@code err.headers.get('Retry-After')}. The shape is the
+ * minimal {@code get(name): string | null} contract that
+ * Angular's {@code HttpHeaders} class satisfies.
  */
 export interface ApiHttpError {
   status: number;
   statusText: string;
   url?: string;
   error: ApiErrorEnvelope | { code: 'NETWORK_ERROR'; message: string };
-  headers?: { get(name: string): string | null };
+  headers: { get(name: string): string | null };
 }

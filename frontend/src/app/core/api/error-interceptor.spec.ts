@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { HttpErrorResponse, HttpHandlerFn, HttpRequest, HttpResponse } from '@angular/common/http';
+import { HttpErrorResponse, HttpHandlerFn, HttpHeaders, HttpRequest, HttpResponse } from '@angular/common/http';
 import { vi } from 'vitest';
 import { of, throwError } from 'rxjs';
 
@@ -100,6 +100,82 @@ describe('errorInterceptor', () => {
       const env = (thrown.error as { error: { code: string; details: Record<string, string> } }).error;
       expect(env.code).toBe('VALIDATION_ERROR');
       expect(env.details).toEqual({ slug: 'required' });
+    });
+  });
+
+  describe('response header projection', () => {
+    /**
+     * Warm-up scenario for the vitest orphan quirk (PR11c
+     * discovery #15): the first {@code it} of a describe block
+     * is silently dropped by vitest 4 + @angular/build:unit-test.
+     * The 5 substantive scenarios below produce 4 reported
+     * tests; the 2 we add here produce 1 additional reported
+     * test (plus the 2 from the previous describe blocks).
+     */
+    it('warm-up: passes through a 2xx response unchanged', async () => {
+      const { handler } = makeHandler();
+      const req = new HttpRequest('GET', '/api/v1/tenants/me');
+
+      const result = await new Promise<unknown>((resolve, reject) => {
+        TestBed.runInInjectionContext(() => {
+          errorInterceptor(req, handler).subscribe({
+            next: (v) => resolve(v),
+            error: (e) => reject(e),
+          });
+        });
+      });
+
+      expect(result).toBeDefined();
+    });
+
+    it('projects the original response headers onto the rethrown error', async () => {
+      const err = new HttpErrorResponse({
+        status: 401,
+        statusText: 'Unauthorized',
+        headers: new HttpHeaders({ 'Retry-After': '120' }),
+        error: { error: { code: 'ACCOUNT_LOCKED', message: 'locked' } },
+      });
+      const { handler } = makeHandler(err);
+      const req = new HttpRequest('POST', '/api/v1/auth/login', { slug: 'mvr' });
+
+      const thrown = await new Promise<HttpErrorResponse>((resolve) => {
+        TestBed.configureTestingModule({ providers: [AuthStore] });
+        TestBed.runInInjectionContext(() => {
+          errorInterceptor(req, handler).subscribe({
+            error: (e) => resolve(e as HttpErrorResponse),
+          });
+        });
+      });
+
+      // The interceptor projects the original HttpErrorResponse's
+      // headers into the rethrown object alongside the parsed
+      // envelope at `thrown.error`. The shape of the rethrown
+      // object is { error, headers, status, ... } where headers
+      // comes from the original response.
+      const apiErr = thrown as { error: unknown; headers: { get(name: string): string | null } };
+      expect(apiErr.headers.get('Retry-After')).toBe('120');
+    });
+
+    it('projects an empty headers object when the response has no headers (network failure)', async () => {
+      const err = new HttpErrorResponse({ status: 0, statusText: 'Unknown Error' });
+      const { handler } = makeHandler(err);
+      const req = new HttpRequest('GET', '/api/v1/tenants/me');
+
+      const thrown = await new Promise<HttpErrorResponse>((resolve) => {
+        TestBed.configureTestingModule({ providers: [AuthStore] });
+        TestBed.runInInjectionContext(() => {
+          errorInterceptor(req, handler).subscribe({
+            error: (e) => resolve(e as HttpErrorResponse),
+          });
+        });
+      });
+
+      // Even on a network failure the headers object is
+      // present (empty), so call sites can do `err.headers.get(k)`
+      // without null-checking.
+      const apiErr = thrown as { error: unknown; headers: { get(name: string): string | null } };
+      expect(apiErr.headers).toBeDefined();
+      expect(apiErr.headers.get('Retry-After')).toBeNull();
     });
   });
 
