@@ -71,6 +71,16 @@
   --color-tertiary-fixed-dim: #62df7d;
   --color-on-tertiary-fixed: #002109;
   --color-on-tertiary-fixed-variant: #005320;
+  /* Warning family — Material 3 tonal pair (4th status). Consumed
+   * by the register wizard's province-load-error banner. */
+  --color-warning: #7c4d00;
+  --color-on-warning: #ffffff;
+  --color-warning-container: #ffe0a8;
+  --color-on-warning-container: #291800;
+  --color-warning-fixed: #ffe0a8;
+  --color-warning-fixed-dim: #ffb95a;
+  --color-on-warning-fixed: #291800;
+  --color-on-warning-fixed-variant: #5d3700;
   --color-background: #faf8ff;
   --color-on-background: #131b2e;
   --color-surface-variant: #dae2fd;
