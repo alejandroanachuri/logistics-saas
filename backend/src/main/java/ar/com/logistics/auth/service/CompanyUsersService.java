@@ -7,7 +7,6 @@ import ar.com.logistics.auth.repository.system.RoleRepository;
 import ar.com.logistics.common.audit.AuditEvent;
 import ar.com.logistics.common.audit.AuditLogger;
 import ar.com.logistics.common.exception.BusinessRuleException;
-import ar.com.logistics.common.exception.ErrorCode;
 import ar.com.logistics.common.exception.ResourceNotFoundException;
 import ar.com.logistics.common.exception.ValidationException;
 import ar.com.logistics.common.validation.PasswordValidator;
@@ -254,8 +253,7 @@ public class CompanyUsersService {
     public CompanyUserDetail get(UUID tenantId, UUID userId) {
         CompanyUser u = userRepository
                 .findByTenantIdAndId(tenantId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        ErrorCode.TENANT_NOT_FOUND, CODE_USER_NOT_FOUND, Map.of("userId", userId.toString())));
+                .orElseThrow(() -> new BusinessRuleException(CODE_USER_NOT_FOUND, Map.of("userId", userId.toString())));
         return mapToDetail(u, roleAssignmentService.getRolesForUser(u.getId()));
     }
 
@@ -272,8 +270,7 @@ public class CompanyUsersService {
     public CompanyUserDetail update(UUID tenantId, UUID adminId, UUID userId, UpdateCompanyUserRequest req) {
         CompanyUser u = userRepository
                 .findByTenantIdAndId(tenantId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        ErrorCode.TENANT_NOT_FOUND, CODE_USER_NOT_FOUND, Map.of("userId", userId.toString())));
+                .orElseThrow(() -> new BusinessRuleException(CODE_USER_NOT_FOUND, Map.of("userId", userId.toString())));
 
         // Self-edit guard — fires BEFORE the first/last admin checks so
         // an admin cannot bypass them by editing themselves.
@@ -371,8 +368,7 @@ public class CompanyUsersService {
     public void disable(UUID tenantId, UUID adminId, UUID userId) {
         CompanyUser u = userRepository
                 .findByTenantIdAndId(tenantId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        ErrorCode.TENANT_NOT_FOUND, CODE_USER_NOT_FOUND, Map.of("userId", userId.toString())));
+                .orElseThrow(() -> new BusinessRuleException(CODE_USER_NOT_FOUND, Map.of("userId", userId.toString())));
 
         businessRuleValidator.assertNotSelf(adminId, userId);
         businessRuleValidator.assertNotFirstAdmin(userId, tenantId, BusinessRuleValidator.Action.DISABLE);
@@ -415,8 +411,7 @@ public class CompanyUsersService {
     public CompanyUserDetail reactivate(UUID tenantId, UUID adminId, UUID userId) {
         CompanyUser u = userRepository
                 .findByTenantIdAndId(tenantId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        ErrorCode.TENANT_NOT_FOUND, CODE_USER_NOT_FOUND, Map.of("userId", userId.toString())));
+                .orElseThrow(() -> new BusinessRuleException(CODE_USER_NOT_FOUND, Map.of("userId", userId.toString())));
 
         if (u.getStatus() == CompanyUser.UserStatus.ACTIVE) {
             throw new BusinessRuleException(CODE_USER_ALREADY_ACTIVE, Map.of("userId", userId.toString()));
@@ -452,8 +447,7 @@ public class CompanyUsersService {
     public ResetPasswordResponse resetPassword(UUID tenantId, UUID adminId, UUID userId) {
         CompanyUser u = userRepository
                 .findByTenantIdAndId(tenantId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        ErrorCode.TENANT_NOT_FOUND, CODE_USER_NOT_FOUND, Map.of("userId", userId.toString())));
+                .orElseThrow(() -> new BusinessRuleException(CODE_USER_NOT_FOUND, Map.of("userId", userId.toString())));
 
         String newPassword = passwordGenerator.generate().value();
         u.setPasswordHash(passwordEncoder.encode(newPassword));
