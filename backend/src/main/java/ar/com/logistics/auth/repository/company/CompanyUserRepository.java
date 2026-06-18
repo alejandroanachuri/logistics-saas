@@ -28,4 +28,22 @@ public interface CompanyUserRepository extends JpaRepository<CompanyUser, UUID> 
     boolean existsByTenantIdAndUsername(UUID tenantId, String username);
 
     boolean existsByTenantIdAndEmail(UUID tenantId, String email);
+
+    Optional<CompanyUser> findByTenantIdAndId(UUID tenantId, UUID id);
+
+    boolean existsByTenantIdAndEmailAndIdNot(UUID tenantId, String email, UUID excludedId);
+
+    /**
+     * Count how many active rows for {@code userId} satisfy the
+     * {@code isFirstAdmin} derivation:
+     * {@code created_by IS NULL AND deleted_at IS NULL}. Returns 1
+     * iff the user is the registration-time first admin AND has not
+     * been soft-deleted; 0 otherwise.
+     *
+     * <p>Implemented as a derived query so Hibernate emits a single
+     * COUNT query that runs under RLS on the company pool
+     * (cross-tenant isolation baked in — a user id from another
+     * tenant is invisible).
+     */
+    long countByIdAndCreatedByIsNullAndDeletedAtIsNull(UUID id);
 }

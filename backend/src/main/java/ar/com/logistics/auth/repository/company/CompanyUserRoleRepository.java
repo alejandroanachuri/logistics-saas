@@ -78,4 +78,36 @@ public interface CompanyUserRoleRepository extends JpaRepository<CompanyUserRole
      * {@code COMPANY_USER_ROLES_REMOVED} for the audit log.
      */
     long deleteByCompanyUserIdAndRoleId(UUID companyUserId, UUID roleId);
+
+    /**
+     * Count the active {@code COMPANY_ADMIN} role assignments for a
+     * tenant. Used by {@code BusinessRuleValidator.isLastAdmin} (PR-2)
+     * to enforce the "tenant must always retain ≥ 1 active admin"
+     * invariant (spec A.6 + C5).
+     *
+     * <p>The query joins through {@code company_users} (filtered by
+     * tenant via RLS) and {@code roles} (looking up the
+     * {@code COMPANY_ADMIN} role by name + scope). Returns 0 when the
+     * tenant has no active admins; the caller interprets count == 1
+     * as "this user is the last admin".
+     *
+     * <p>The SQL is hand-rolled (not a derived query) because the join
+     * through three tables with two filter predicates and a JOIN on
+     * roles is more readable as native SQL than as a method-name DSL.
+     */
+    @Query(
+            value =
+                    """
+                    SELECT COUNT(*)
+                      FROM public.company_user_roles cur
+                      JOIN public.company_users cu ON cur.company_user_id = cu.id
+                      JOIN public.roles r ON cur.role_id = r.id
+                     WHERE r.name = 'COMPANY_ADMIN'
+                       AND r.scope = 'COMPANY'
+                       AND cu.tenant_id = :tenantId
+                       AND cu.status = 'ACTIVE'
+                       AND cu.deleted_at IS NULL
+                    """,
+            nativeQuery = true)
+    long countActiveCompanyAdmins(@Param("tenantId") UUID tenantId);
 }
