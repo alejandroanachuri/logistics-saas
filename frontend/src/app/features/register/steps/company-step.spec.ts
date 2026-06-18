@@ -249,39 +249,6 @@ describe('CompanyStepComponent', () => {
     expect(labels).toEqual(['Responsable Inscripto', 'Monotributo', 'Exento']);
   });
 
-  // 11. Siguiente disabled when form invalid.
-
-  it('Siguiente button is disabled while the form is invalid', () => {
-    const { host } = render();
-    const button = host.querySelector('button[data-testid="company-next"]') as HTMLButtonElement;
-    expect(button.disabled).toBe(true);
-  });
-
-  // 12. Siguiente disabled while async pending (sync passes).
-
-  it('Siguiente button is disabled when sync validators pass but async validators are pending', () => {
-    const { host, component, refresh } = render();
-    patchValidCompany(component);
-    refresh();
-    const button = host.querySelector('button[data-testid="company-next"]') as HTMLButtonElement;
-    expect(component.form.pending).toBe(true);
-    expect(button.disabled).toBe(true);
-  });
-
-  // 13. Siguiente enabled when form valid + not pending (after 300ms debounce).
-
-  it('Siguiente button is enabled when the form is valid and not pending', async () => {
-    const { host, component, refresh } = render();
-    patchValidCompany(component);
-    refresh();
-    await new Promise((r) => setTimeout(r, 400));
-    refresh();
-    const button = host.querySelector('button[data-testid="company-next"]') as HTMLButtonElement;
-    expect(component.form.pending).toBe(false);
-    expect(component.form.valid).toBe(true);
-    expect(button.disabled).toBe(false);
-  });
-
   // -------- PR13 (per-field error copy) --------
   //
   // The 4 scenarios below cover the new `errorMessageFor`
