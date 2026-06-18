@@ -415,7 +415,10 @@ describe('CompanyStepComponent', () => {
     const input = host.querySelector('#company-slug') as HTMLInputElement;
     expect(input.getAttribute('aria-invalid')).toBe('true');
     expect(input.getAttribute('aria-describedby')).toBe('company-slug-error');
-    // The red border is applied via [class.border-red-500].
+    // The error border is applied via [class.border-error]
+    // (design-system token — was [class.border-red-500] before
+    // the re-skin). The assertion below is on shouldShowError(),
+    // not on the class itself.
     expect(component.shouldShowError(component.form.controls.slug)).toBe(true);
   });
 });
