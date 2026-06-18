@@ -12,7 +12,15 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** Maps to {@code public.company_users} (V3). RLS-scoped by tenant. */
+/**
+ * Maps to {@code public.company_users} (V3). RLS-scoped by tenant.
+ *
+ * <p>Roles live in the {@code company_user_roles} junction (V12)
+ * and are NOT modelled as a JPA association on this entity — see
+ * {@code CompanyUserRole} javadoc for the rationale. The service
+ * layer resolves roles via
+ * {@code CompanyUserRoleRepository.findRoleIdsByUserId(userId)}.
+ */
 @Entity
 @Table(name = "company_users")
 @Getter
@@ -25,9 +33,6 @@ public class CompanyUser extends BaseEntity {
 
     @Column(name = "tenant_id", nullable = false, updatable = false)
     private UUID tenantId;
-
-    @Column(name = "role_id", nullable = false)
-    private UUID roleId;
 
     @Column(name = "username", length = 30, nullable = false)
     private String username;
@@ -121,13 +126,20 @@ public class CompanyUser extends BaseEntity {
      * hook, and pre-populates the verification token + 24-hour
      * expiry. The {@code passwordHash} is set by the service
      * after BCrypt encoding.
+     *
+     * <p>Note: this factory does NOT take a role id. Roles live in
+     * the {@code company_user_roles} junction (V12) and are inserted
+     * by the registration service after the user row is saved (the
+     * call uses the {@code companyDataSource}-side
+     * {@code CompanyUserRoleRepository.insertRow}). This split lets
+     * the user insert go through the system pool (BYPASSRLS,
+     * registration is global) while still attaching roles to the
+     * freshly created user.
      */
-    public static CompanyUser create(
-            UUID tenantId, UUID roleId, String username, String email, String firstName, String lastName) {
+    public static CompanyUser create(UUID tenantId, String username, String email, String firstName, String lastName) {
         CompanyUser u = new CompanyUser();
         u.id = UUID.randomUUID();
         u.tenantId = tenantId;
-        u.roleId = roleId;
         u.username = username;
         u.email = email;
         u.firstName = firstName;

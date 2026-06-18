@@ -343,17 +343,22 @@ class RlsIntegrationIT {
         String id = UUID.randomUUID().toString();
         String roleId = adminJdbc.queryForObject(
                 "SELECT id FROM public.roles WHERE name = 'COMPANY_ADMIN' AND scope = 'COMPANY'", String.class);
+        // role_id was dropped from company_users in V13 (the
+        // many-to-many junction company_user_roles replaces it). The
+        // INSERT below matches the V3 schema minus role_id; the
+        // junction row inserted right after mirrors what
+        // RegistrationService does on the production path.
         adminJdbc.update(
-                "INSERT INTO public.company_users (id, tenant_id, role_id, username, email, first_name, last_name, password_hash, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO public.company_users (id, tenant_id, username, email, first_name, last_name, password_hash, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 id,
                 tenantId,
-                roleId,
                 username,
                 email,
                 "Admin",
                 username,
                 "$2a$12$placeholder.hash.placeholder.hash.placeholder.hash.placeholder",
                 "ACTIVE");
+        adminJdbc.update("INSERT INTO public.company_user_roles (company_user_id, role_id) VALUES (?, ?)", id, roleId);
         return id;
     }
 

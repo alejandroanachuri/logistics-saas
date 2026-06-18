@@ -5,6 +5,7 @@ import ar.com.logistics.auth.domain.CompanyUser.UserStatus;
 import ar.com.logistics.auth.domain.Role;
 import ar.com.logistics.auth.jwt.JwtService;
 import ar.com.logistics.auth.repository.system.CompanyUserAdminRepository;
+import ar.com.logistics.auth.repository.system.CompanyUserRoleAdminRepository;
 import ar.com.logistics.auth.repository.system.RoleRepository;
 import ar.com.logistics.common.audit.AuditEvent;
 import ar.com.logistics.common.audit.AuditLogger;
@@ -69,6 +70,7 @@ public class LoginService {
 
     private final TenantAdminRepository tenantAdminRepository;
     private final CompanyUserAdminRepository userAdminRepository;
+    private final CompanyUserRoleAdminRepository userRoleAdminRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -78,6 +80,7 @@ public class LoginService {
     public LoginService(
             TenantAdminRepository tenantAdminRepository,
             CompanyUserAdminRepository userAdminRepository,
+            CompanyUserRoleAdminRepository userRoleAdminRepository,
             RoleRepository roleRepository,
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
@@ -85,6 +88,7 @@ public class LoginService {
             RefreshTokenService refreshTokenService) {
         this.tenantAdminRepository = tenantAdminRepository;
         this.userAdminRepository = userAdminRepository;
+        this.userRoleAdminRepository = userRoleAdminRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -167,12 +171,16 @@ public class LoginService {
             throw new AuthenticationException(ErrorCode.INVALID_CREDENTIALS);
         }
 
-        // 6. Load the role. The CompanyUser holds role_id; we read
-        //    the name (e.g. COMPANY_ADMIN) from public.roles.
+        // 6. Load the role. Roles live in the company_user_roles
+        //    junction (V12) — read the first one (every user has at
+        //    least one, asserted by RegistrationService on insert).
         Role role = roleRepository
-                .findById(user.getRoleId())
+                .findById(userRoleAdminRepository.findRoleIdsByUserId(user.getId()).stream()
+                        .findFirst()
+                        .orElseThrow(() -> new IllegalStateException(
+                                "company_users row " + user.getId() + " has no role assignment in company_user_roles")))
                 .orElseThrow(() -> new IllegalStateException(
-                        "company_users row " + user.getId() + " references a non-existent role " + user.getRoleId()));
+                        "company_user_roles row for user " + user.getId() + " references a non-existent role"));
 
         // 7. Success side-effects: reset counter, clear lock,
         //    stamp last_login_at.

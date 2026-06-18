@@ -5,6 +5,7 @@ import ar.com.logistics.auth.domain.Role;
 import ar.com.logistics.auth.dto.RegisterRequest;
 import ar.com.logistics.auth.dto.RegisterResponse;
 import ar.com.logistics.auth.repository.system.CompanyUserAdminRepository;
+import ar.com.logistics.auth.repository.system.CompanyUserRoleAdminRepository;
 import ar.com.logistics.auth.repository.system.RoleRepository;
 import ar.com.logistics.common.audit.AuditEvent;
 import ar.com.logistics.common.audit.AuditLogger;
@@ -62,6 +63,7 @@ public class RegistrationService {
     private final TenantAdminRepository tenantAdminRepository;
     private final TenantRepository tenantRepository;
     private final CompanyUserAdminRepository companyUserAdminRepository;
+    private final CompanyUserRoleAdminRepository companyUserRoleAdminRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditLogger auditLogger;
@@ -70,12 +72,14 @@ public class RegistrationService {
             TenantAdminRepository tenantAdminRepository,
             TenantRepository tenantRepository,
             CompanyUserAdminRepository companyUserAdminRepository,
+            CompanyUserRoleAdminRepository companyUserRoleAdminRepository,
             RoleRepository roleRepository,
             PasswordEncoder passwordEncoder,
             AuditLogger auditLogger) {
         this.tenantAdminRepository = tenantAdminRepository;
         this.tenantRepository = tenantRepository;
         this.companyUserAdminRepository = companyUserAdminRepository;
+        this.companyUserRoleAdminRepository = companyUserRoleAdminRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.auditLogger = auditLogger;
@@ -173,13 +177,20 @@ public class RegistrationService {
         // 9. Build the admin user (verification token + 24h expiry set in the factory)
         CompanyUser user = CompanyUser.create(
                 tenant.getId(),
-                role.getId(),
                 username,
                 req.admin().email(),
                 req.admin().firstName(),
                 req.admin().lastName());
         user.setPasswordHash(passwordEncoder.encode(req.admin().password()));
         user = companyUserAdminRepository.save(user);
+
+        // 9b. Attach the COMPANY_ADMIN role through the company_user_roles
+        // junction (V12). The junction lives on the systemDataSource side
+        // because no app.current_tenant context is set yet — the tenant
+        // was just created in this same transaction. assignedBy is null
+        // because registration has no actor (the isFirstAdmin criterion
+        // depends on this: created_by IS NULL).
+        companyUserRoleAdminRepository.insertRow(user.getId(), role.getId(), null);
 
         // 10. Audit
         auditLogger.logAsync(new AuditEvent(

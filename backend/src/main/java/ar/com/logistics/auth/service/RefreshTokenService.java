@@ -6,6 +6,7 @@ import ar.com.logistics.auth.domain.RefreshToken.UserScope;
 import ar.com.logistics.auth.domain.Role;
 import ar.com.logistics.auth.jwt.JwtService;
 import ar.com.logistics.auth.repository.system.CompanyUserAdminRepository;
+import ar.com.logistics.auth.repository.system.CompanyUserRoleAdminRepository;
 import ar.com.logistics.auth.repository.system.RefreshTokenAdminRepository;
 import ar.com.logistics.auth.repository.system.RoleRepository;
 import ar.com.logistics.common.audit.AuditEvent;
@@ -56,6 +57,7 @@ public class RefreshTokenService {
     private final RefreshTokenAdminRepository refreshTokenRepo;
     private final TenantAdminRepository tenantAdminRepository;
     private final CompanyUserAdminRepository userAdminRepository;
+    private final CompanyUserRoleAdminRepository userRoleAdminRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -65,6 +67,7 @@ public class RefreshTokenService {
             RefreshTokenAdminRepository refreshTokenRepo,
             TenantAdminRepository tenantAdminRepository,
             CompanyUserAdminRepository userAdminRepository,
+            CompanyUserRoleAdminRepository userRoleAdminRepository,
             RoleRepository roleRepository,
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
@@ -72,6 +75,7 @@ public class RefreshTokenService {
         this.refreshTokenRepo = refreshTokenRepo;
         this.tenantAdminRepository = tenantAdminRepository;
         this.userAdminRepository = userAdminRepository;
+        this.userRoleAdminRepository = userRoleAdminRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -163,9 +167,12 @@ public class RefreshTokenService {
                 .orElseThrow(() -> new IllegalStateException(
                         "refresh_tokens row references a non-existent tenants row " + matchTenantId));
         Role role = roleRepository
-                .findById(user.getRoleId())
+                .findById(userRoleAdminRepository.findRoleIdsByUserId(user.getId()).stream()
+                        .findFirst()
+                        .orElseThrow(() -> new IllegalStateException(
+                                "company_users row " + user.getId() + " has no role assignment in company_user_roles")))
                 .orElseThrow(() -> new IllegalStateException(
-                        "company_users row " + user.getId() + " references a non-existent role " + user.getRoleId()));
+                        "company_user_roles row for user " + user.getId() + " references a non-existent role"));
 
         // Issue the new pair.
         UUID newRawUuid = UUID.randomUUID();
