@@ -1,39 +1,46 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+import { CardComponent } from '../../shared/ui/card';
+
 /**
- * Tiny public landing page for the F1 slice. The real
- * hero/feature content lands in a later iteration; v1
- * just needs the public route to render something so the
- * e2e gate has a real DOM to assert against.
+ * Public landing page for the F1 slice. The full hero /
+ * feature content (per /DESIGN.md) lands in a later
+ * iteration; v1 just needs the public route to render
+ * something with the design system applied so the
+ * visual surface is consistent with the rest of the app.
  */
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [RouterLink],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [RouterLink, CardComponent],
   template: `
-    <main class="w-full max-w-md">
-      <section class="rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
-        <h1 class="text-2xl font-semibold text-slate-900">Logística SaaS</h1>
-        <p class="mt-2 text-sm text-slate-600">
-          Gestioná envíos, clientes y facturación para tu empresa.
-        </p>
-        <div class="mt-6 flex flex-col gap-3">
+    <main class="mx-auto w-full max-w-md px-4 py-16">
+      <app-card>
+        <div class="text-center">
+          <h1 class="text-3xl font-semibold text-on-surface">Logística SaaS</h1>
+          <p class="mt-3 text-base text-on-surface-variant">
+            Gestioná envíos, clientes y facturación para tu empresa.
+          </p>
+        </div>
+        <div class="mt-8 flex flex-col gap-3">
           <a
             routerLink="/login"
-            class="rounded-md bg-slate-900 px-4 py-2 text-center text-sm font-medium text-white hover:bg-slate-800"
+            class="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-on-primary hover:bg-primary-fixed-dim focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             Ir a iniciar sesión
           </a>
           <a
             routerLink="/register"
-            class="rounded-md border border-slate-300 px-4 py-2 text-center text-sm font-medium text-slate-700 hover:bg-slate-50"
+            class="inline-flex h-10 w-full items-center justify-center rounded-md border border-outline-variant bg-surface-container-lowest px-4 text-sm font-semibold text-on-surface hover:bg-surface-container-low focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             Registrate
           </a>
         </div>
-      </section>
+      </app-card>
     </main>
   `,
 })
 export class HomeComponent {}
+

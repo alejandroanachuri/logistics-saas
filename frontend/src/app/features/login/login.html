@@ -1,49 +1,49 @@
-<main class="w-full max-w-md">
-  <section class="rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
-    <h1 class="text-2xl font-semibold text-slate-900">Iniciar sesión</h1>
-    <p class="mt-2 text-sm text-slate-600">Ingresá con tu slug de empresa, usuario y contraseña.</p>
+<main class="mx-auto w-full max-w-md px-4 py-16">
+  <app-card>
+    <h1 class="text-2xl font-semibold text-on-surface">Iniciar sesión</h1>
+    <p class="mt-2 text-sm text-on-surface-variant">Ingresá con tu slug de empresa, usuario y contraseña.</p>
 
     <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate class="mt-6 space-y-4">
       <div class="space-y-1">
-        <label for="login-slug" class="block text-sm font-medium text-slate-700">Slug de la empresa</label>
+        <label for="login-slug" class="block text-sm font-medium text-on-surface">Slug de la empresa</label>
         <input
           id="login-slug"
           type="text"
           formControlName="slug"
           autocomplete="organization"
           spellcheck="false"
-          class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          class="block w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
         />
       </div>
 
       <div class="space-y-1">
-        <label for="login-username" class="block text-sm font-medium text-slate-700">Usuario</label>
+        <label for="login-username" class="block text-sm font-medium text-on-surface">Usuario</label>
         <input
           id="login-username"
           type="text"
           formControlName="username"
           autocomplete="username"
           spellcheck="false"
-          class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          class="block w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
         />
       </div>
 
       <div class="space-y-1">
-        <label for="login-password" class="block text-sm font-medium text-slate-700">Contraseña</label>
+        <label for="login-password" class="block text-sm font-medium text-on-surface">Contraseña</label>
         <div class="relative">
           <input
             id="login-password"
             [type]="isPasswordVisible() ? 'text' : 'password'"
             formControlName="password"
             autocomplete="current-password"
-            class="block w-full rounded-md border border-slate-300 px-3 py-2 pr-20 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+            class="block w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 pr-20 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
           <button
             type="button"
             (click)="togglePasswordVisibility()"
             [attr.aria-label]="isPasswordVisible() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
             [attr.aria-pressed]="isPasswordVisible()"
-            class="absolute inset-y-0 right-0 flex items-center px-3 text-sm font-medium text-slate-600 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-1 rounded-r-md"
+            class="absolute inset-y-0 right-0 flex items-center px-3 text-sm font-medium text-on-surface-variant hover:text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded-r-md"
           >
             {{ isPasswordVisible() ? 'Ocultar' : 'Mostrar' }}
           </button>
@@ -60,7 +60,7 @@
       <div
         role="status"
         aria-live="polite"
-        class="min-h-[1.25rem] text-sm text-red-600"
+        class="min-h-[1.25rem] text-sm text-error"
         data-testid="login-error"
       >
         {{ errorMessage() }}
@@ -69,7 +69,7 @@
       <button
         type="submit"
         [disabled]="form.invalid || isLoading()"
-        class="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300"
+        class="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-on-primary hover:bg-primary-fixed-dim focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
       >
         {{ isLoading() ? 'Ingresando...' : 'Ingresar' }}
       </button>
@@ -80,14 +80,14 @@
           disabled
           title="Próximamente"
           aria-disabled="true"
-          class="cursor-not-allowed text-sm font-medium text-slate-400"
+          class="cursor-not-allowed text-sm font-medium text-on-surface-variant opacity-50"
         >
           ¿Olvidaste tu contraseña?
         </button>
-        <a routerLink="/register" class="text-sm font-medium text-slate-900 hover:underline">
+        <a routerLink="/register" class="text-sm font-medium text-primary hover:underline">
           Registrate
         </a>
       </div>
     </form>
-  </section>
+  </app-card>
 </main>

@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { LoginService } from '../../core/services/login.service';
 import { LoginRequest } from '../../core/types';
+import { CardComponent } from '../../shared/ui/card';
 
 /**
  * The {@code /login} page (F1 sub-spec §"Login Page").
@@ -25,7 +26,7 @@ import { LoginRequest } from '../../core/types';
   selector: 'app-login',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, CardComponent],
   templateUrl: './login.html',
 })
 export class LoginComponent {
