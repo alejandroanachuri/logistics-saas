@@ -82,13 +82,25 @@
   --radius-xl: 1rem;
   --radius-2xl: 1.5rem;
 
-  /* Spacing scale (4px / 8px incremental). */
-  --spacing-base: 4px;
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
+  /* Spacing scale (4px / 8px incremental).
+   *
+   * Prefixed with 'ds-' (Design System) to avoid collision
+   * with Tailwind v4's internal --spacing-* tokens. Tailwind
+   * uses --spacing (and --spacing-sm/md/lg/xl) for the
+   * default spacing scale that powers p-*, m-*, gap-*,
+   * max-w-*, etc. Naming our tokens --spacing-md would
+   * override Tailwind's --spacing-md and shrink max-w-md
+   * from 28rem to 16px (which is what happened in the
+   * initial F1 + design-system batch). The ds- prefix
+   * keeps the names semantic without shadowing the
+   * framework.
+   */
+  --ds-spacing-base: 4px;
+  --ds-spacing-xs: 4px;
+  --ds-spacing-sm: 8px;
+  --ds-spacing-md: 16px;
+  --ds-spacing-lg: 24px;
+  --ds-spacing-xl: 32px;
 
   /* Typography families. */
   --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
