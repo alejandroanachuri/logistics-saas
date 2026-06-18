@@ -1,12 +1,12 @@
 <section class="w-full max-w-2xl" data-testid="admin-step">
-  <h2 class="text-xl font-semibold text-slate-900">Datos del administrador</h2>
-  <p class="mt-1 text-sm text-slate-600">Ingresá los datos de la persona que va a administrar la cuenta.</p>
+  <h2 class="text-xl font-semibold text-on-surface">Datos del administrador</h2>
+  <p class="mt-1 text-sm text-on-surface-variant">Ingresá los datos de la persona que va a administrar la cuenta.</p>
 
   <form [formGroup]="form" (ngSubmit)="$event.preventDefault()" novalidate class="mt-6 space-y-6">
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div class="space-y-1">
-        <label for="admin-first-name" class="block text-sm font-medium text-slate-700">
-          Nombre <span class="text-red-600" aria-hidden="true">*</span>
+        <label for="admin-first-name" class="block text-sm font-medium text-on-surface">
+          Nombre <span class="text-error" aria-hidden="true">*</span>
         </label>
         <input
           id="admin-first-name"
@@ -16,17 +16,17 @@
           aria-required="true"
           [attr.aria-invalid]="shouldShowError(form.controls.firstName) ? 'true' : null"
           [attr.aria-describedby]="errorMessageFor(form.controls.firstName) ? 'admin-first-name-error' : null"
-          [class.border-red-500]="shouldShowError(form.controls.firstName)"
-          class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          [class.border-error]="shouldShowError(form.controls.firstName)"
+          class="block w-full rounded-md border border-outline-variant px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
         />
         @if (errorMessageFor(form.controls.firstName); as msg) {
-          <p id="admin-first-name-error" role="alert" class="text-sm text-red-600">{{ msg }}</p>
+          <p id="admin-first-name-error" role="alert" class="text-sm text-error">{{ msg }}</p>
         }
       </div>
 
       <div class="space-y-1">
-        <label for="admin-last-name" class="block text-sm font-medium text-slate-700">
-          Apellido <span class="text-red-600" aria-hidden="true">*</span>
+        <label for="admin-last-name" class="block text-sm font-medium text-on-surface">
+          Apellido <span class="text-error" aria-hidden="true">*</span>
         </label>
         <input
           id="admin-last-name"
@@ -36,17 +36,17 @@
           aria-required="true"
           [attr.aria-invalid]="shouldShowError(form.controls.lastName) ? 'true' : null"
           [attr.aria-describedby]="errorMessageFor(form.controls.lastName) ? 'admin-last-name-error' : null"
-          [class.border-red-500]="shouldShowError(form.controls.lastName)"
-          class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          [class.border-error]="shouldShowError(form.controls.lastName)"
+          class="block w-full rounded-md border border-outline-variant px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
         />
         @if (errorMessageFor(form.controls.lastName); as msg) {
-          <p id="admin-last-name-error" role="alert" class="text-sm text-red-600">{{ msg }}</p>
+          <p id="admin-last-name-error" role="alert" class="text-sm text-error">{{ msg }}</p>
         }
       </div>
 
       <div class="space-y-1 sm:col-span-2">
-        <label for="admin-username" class="block text-sm font-medium text-slate-700">
-          Usuario <span class="text-red-600" aria-hidden="true">*</span>
+        <label for="admin-username" class="block text-sm font-medium text-on-surface">
+          Usuario <span class="text-error" aria-hidden="true">*</span>
         </label>
         <input
           id="admin-username"
@@ -57,17 +57,17 @@
           aria-required="true"
           [attr.aria-invalid]="shouldShowError(form.controls.username) ? 'true' : null"
           [attr.aria-describedby]="errorMessageFor(form.controls.username) ? 'admin-username-error' : null"
-          [class.border-red-500]="shouldShowError(form.controls.username)"
-          class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          [class.border-error]="shouldShowError(form.controls.username)"
+          class="block w-full rounded-md border border-outline-variant px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
         />
         @if (errorMessageFor(form.controls.username); as msg) {
-          <p id="admin-username-error" role="alert" class="text-sm text-red-600">{{ msg }}</p>
+          <p id="admin-username-error" role="alert" class="text-sm text-error">{{ msg }}</p>
         }
       </div>
 
       <div class="space-y-1 sm:col-span-2">
-        <label for="admin-email" class="block text-sm font-medium text-slate-700">
-          Email <span class="text-red-600" aria-hidden="true">*</span>
+        <label for="admin-email" class="block text-sm font-medium text-on-surface">
+          Email <span class="text-error" aria-hidden="true">*</span>
         </label>
         <input
           id="admin-email"
@@ -77,17 +77,17 @@
           aria-required="true"
           [attr.aria-invalid]="shouldShowError(form.controls.email) ? 'true' : null"
           [attr.aria-describedby]="errorMessageFor(form.controls.email) ? 'admin-email-error' : null"
-          [class.border-red-500]="shouldShowError(form.controls.email)"
-          class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          [class.border-error]="shouldShowError(form.controls.email)"
+          class="block w-full rounded-md border border-outline-variant px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
         />
         @if (errorMessageFor(form.controls.email); as msg) {
-          <p id="admin-email-error" role="alert" class="text-sm text-red-600">{{ msg }}</p>
+          <p id="admin-email-error" role="alert" class="text-sm text-error">{{ msg }}</p>
         }
       </div>
 
       <div class="space-y-1 sm:col-span-2">
-        <label for="admin-password" class="block text-sm font-medium text-slate-700">
-          Contraseña <span class="text-red-600" aria-hidden="true">*</span>
+        <label for="admin-password" class="block text-sm font-medium text-on-surface">
+          Contraseña <span class="text-error" aria-hidden="true">*</span>
         </label>
         <div class="relative">
           <input
@@ -98,28 +98,28 @@
             aria-required="true"
             [attr.aria-invalid]="shouldShowError(form.controls.password) ? 'true' : null"
             [attr.aria-describedby]="errorMessageFor(form.controls.password) ? 'admin-password-error' : null"
-            [class.border-red-500]="shouldShowError(form.controls.password)"
-            class="block w-full rounded-md border border-slate-300 px-3 py-2 pr-20 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+            [class.border-error]="shouldShowError(form.controls.password)"
+            class="block w-full rounded-md border border-outline-variant px-3 py-2 pr-20 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
           <button
             type="button"
             (click)="togglePasswordVisibility()"
             [attr.aria-label]="isPasswordVisible() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
             [attr.aria-pressed]="isPasswordVisible()"
-            class="absolute inset-y-0 right-0 flex items-center px-3 text-sm font-medium text-slate-600 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-1 rounded-r-md"
+            class="absolute inset-y-0 right-0 flex items-center px-3 text-sm font-medium text-on-surface-variant hover:text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded-r-md"
           >
             {{ isPasswordVisible() ? 'Ocultar' : 'Mostrar' }}
           </button>
         </div>
         <app-password-strength-indicator [password]="form.controls.password.value" />
         @if (errorMessageFor(form.controls.password); as msg) {
-          <p id="admin-password-error" role="alert" class="text-sm text-red-600">{{ msg }}</p>
+          <p id="admin-password-error" role="alert" class="text-sm text-error">{{ msg }}</p>
         }
       </div>
 
       <div class="space-y-1 sm:col-span-2">
-        <label for="admin-password-confirmation" class="block text-sm font-medium text-slate-700">
-          Confirmar contraseña <span class="text-red-600" aria-hidden="true">*</span>
+        <label for="admin-password-confirmation" class="block text-sm font-medium text-on-surface">
+          Confirmar contraseña <span class="text-error" aria-hidden="true">*</span>
         </label>
         <input
           id="admin-password-confirmation"
@@ -129,11 +129,11 @@
           aria-required="true"
           [attr.aria-invalid]="shouldShowError(form.controls.passwordConfirmation) ? 'true' : null"
           [attr.aria-describedby]="errorMessageFor(form.controls.passwordConfirmation) ? 'admin-password-confirmation-error' : null"
-          [class.border-red-500]="shouldShowError(form.controls.passwordConfirmation)"
-          class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          [class.border-error]="shouldShowError(form.controls.passwordConfirmation)"
+          class="block w-full rounded-md border border-outline-variant px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
         />
         @if (errorMessageFor(form.controls.passwordConfirmation); as msg) {
-          <p id="admin-password-confirmation-error" role="alert" class="text-sm text-red-600">{{ msg }}</p>
+          <p id="admin-password-confirmation-error" role="alert" class="text-sm text-error">{{ msg }}</p>
         }
       </div>
     </div>
@@ -147,7 +147,7 @@
     <div
       role="status"
       aria-live="polite"
-      class="min-h-[1.25rem] text-sm text-red-600"
+      class="min-h-[1.25rem] text-sm text-error"
       data-testid="admin-error"
     >
       {{ topLevelError }}
@@ -158,7 +158,7 @@
         type="button"
         [disabled]="!canAdvance"
         data-testid="admin-next"
-        class="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300"
+        class="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-on-primary hover:bg-primary-fixed-dim focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
       >
         Siguiente
       </button>
