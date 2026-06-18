@@ -129,4 +129,32 @@ public interface RefreshTokenAdminRepository extends JpaRepository<RefreshToken,
             @Param("tenantId") UUID tenantId,
             @Param("tokenHash") String tokenHash,
             @Param("expiresAt") Instant expiresAt);
+
+    /**
+     * Bulk revoke every active refresh token for the given
+     * {@code (userId, scope)} pair by stamping {@code revoked_at =
+     * now} on each row. Returns the count of revoked rows for
+     * audit metadata. Used by
+     * {@code RefreshTokenService.revokeAllForUser} which is in
+     * turn called by {@code CompanyUsersService.disable} and
+     * {@code CompanyUsersService.resetPassword} (spec C9).
+     *
+     * <p>The {@code scope} parameter is typed {@code String} (not
+     * {@code UserScope}) because native queries do not honor
+     * JPA's {@code @Enumerated(EnumType.STRING)} mapping — see the
+     * note on {@link #insertRow} for the F1 precedent on this
+     * pattern.
+     */
+    @Modifying
+    @Query(
+            value =
+                    """
+                    UPDATE public.refresh_tokens
+                       SET revoked_at = :now
+                     WHERE user_id = :userId
+                       AND user_scope = :scope
+                       AND revoked_at IS NULL
+                    """,
+            nativeQuery = true)
+    int revokeAllByUserAndScope(@Param("userId") UUID userId, @Param("scope") String scope, @Param("now") Instant now);
 }

@@ -45,4 +45,25 @@ public abstract class BaseEntity {
     void onUpdate() {
         this.updatedAt = Instant.now();
     }
+
+    /**
+     * Protected setter for {@code createdBy}. Used by services in the
+     * same package (or subclass) as the concrete entity to stamp the
+     * acting actor on rows inserted outside of {@code RegistrationService}
+     * (e.g. {@code CompanyUsersService.create}). The registration
+     * service intentionally leaves this NULL because the
+     * {@code isFirstAdmin} derivation depends on it.
+     */
+    public void setCreatedBy(UUID createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    /**
+     * Protected setter for {@code deletedAt}. Used by services that
+     * perform soft delete (e.g. {@code CompanyUsersService.disable})
+     * or restore a soft-deleted row ({@code reactivate}).
+     */
+    public void setDeletedAt(Instant deletedAt) {
+        this.deletedAt = deletedAt;
+    }
 }

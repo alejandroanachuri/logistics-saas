@@ -120,6 +120,62 @@ public class CompanyUser extends BaseEntity {
     }
 
     /**
+     * Setter for the {@code firstName} column. Used by
+     * {@code CompanyUsersService.update} when the admin edits the
+     * field on a non-first-admin user (and on the first admin's own
+     * row — per decision #8 firstName / lastName ARE editable for
+     * the first admin).
+     */
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    /**
+     * Setter for the {@code lastName} column. See {@link #setFirstName}
+     * for the policy rationale.
+     */
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    /**
+     * Setter for the {@code email} column. Used by
+     * {@code CompanyUsersService.update}; the service applies the
+     * first-admin + uniqueness guards before calling this.
+     */
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    /**
+     * Setter for the {@code status} column. Used by
+     * {@code CompanyUsersService.disable} + {@code reactivate}.
+     */
+    public void setStatus(UserStatus status) {
+        this.status = status;
+    }
+
+    /**
+     * Setter for {@code createdBy} (inherited from {@link BaseEntity}).
+     * Used by {@code CompanyUsersService.create} to stamp the
+     * acting admin on rows inserted through the company-users
+     * endpoint (the registration path leaves it NULL by design).
+     */
+    public void setCreatedBy(UUID createdBy) {
+        super.setCreatedBy(createdBy);
+    }
+
+    /**
+     * Setter for {@code deletedAt} (inherited from {@link BaseEntity}).
+     * Used by {@code CompanyUsersService.disable} (set to now) and
+     * {@code reactivate} (set to NULL) to mark the row as soft-deleted
+     * or restored.
+     */
+    public void setDeletedAt(Instant deletedAt) {
+        super.setDeletedAt(deletedAt);
+    }
+
+    /**
      * Static factory used by the registration service to create a
      * fresh first-admin user. Sets the {@code id}, leaves the audit
      * timestamps to {@link BaseEntity}'s {@code @PrePersist}

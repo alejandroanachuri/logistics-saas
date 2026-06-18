@@ -224,6 +224,32 @@ public class RefreshTokenService {
     }
 
     // -------------------------------------------------------------------
+    //  Bulk revocation (T-2.10, used by CompanyUsersService.disable +
+    //  CompanyUsersService.resetPassword)
+    // -------------------------------------------------------------------
+
+    /**
+     * Revoke every active refresh token for a given user / scope
+     * pair. Returns the number of rows revoked. Used by the team
+     * management service to force-revoke tokens on disable and
+     * reset-password — the user's existing sessions must not
+     * survive either action (per spec C9).
+     *
+     * <p>Native query updates {@code revoked_at = NOW()} for every
+     * row matching {@code user_id = :userId AND user_scope = :scope
+     * AND revoked_at IS NULL}. The {@code user_scope} filter is
+     * belt-and-suspenders against any future collision between
+     * {@code company_users.id} and a {@code platform_users.id}
+     * namespace (UUID collision probability is astronomically low,
+     * but adding scope costs one WHERE-clause predicate).
+     */
+    @Transactional("systemTransactionManager")
+    public int revokeAllForUser(UUID userId, String scope) {
+        Instant now = Instant.now();
+        return refreshTokenRepo.revokeAllByUserAndScope(userId, scope, now);
+    }
+
+    // -------------------------------------------------------------------
     //  Reuse detection
     // -------------------------------------------------------------------
 
