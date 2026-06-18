@@ -96,7 +96,16 @@ colors:
 
 &#x20; on-background: '#131b2e'
 
-&#x20; surface-variant: '#dae2fd'
+&#x20;   surface-variant: '#dae2fd'
+
+  warning: '#7c4d00'
+  on-warning: '#ffffff'
+  warning-container: '#ffe0a8'
+  on-warning-container: '#291800'
+  warning-fixed: '#ffe0a8'
+  warning-fixed-dim: '#ffb95a'
+  on-warning-fixed: '#291800'
+  on-warning-fixed-variant: '#5d3700'
 
 typography:
 
