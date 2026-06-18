@@ -76,12 +76,16 @@ public class RlsAspect {
 
     /**
      * Fires on the company-side repository entry point. The pointcut
-     * matches the {@code tenant.repository} package only (not the
-     * whole Spring Data Repository hierarchy) so it does not cross
-     * into the platform or auth-domain services that route via
-     * systemDataSource.
+     * matches the {@code tenant.repository} and {@code auth.repository.company}
+     * packages (not the whole Spring Data Repository hierarchy) so it
+     * does not cross into the platform or auth-domain services that
+     * route via systemDataSource. The {@code auth.repository.company}
+     * subpackage was added in etapa-2 PR-2 when the new
+     * {@code CompanyUserRepository} + {@code CompanyUserRoleRepository}
+     * moved into the auth domain but still need RLS tenant isolation.
      */
-    @Around("execution(* ar.com.logistics.tenant.repository..*(..))")
+    @Around(
+            "execution(* ar.com.logistics.tenant.repository..*(..)) || execution(* ar.com.logistics.auth.repository.company..*(..))")
     public Object emitCurrentTenant(ProceedingJoinPoint joinPoint) throws Throwable {
         if (!rlsEnabled) {
             return joinPoint.proceed();
