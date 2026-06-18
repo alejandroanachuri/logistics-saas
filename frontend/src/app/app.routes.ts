@@ -43,7 +43,18 @@ export const routes: Routes = [
     path: 'dashboard',
     canActivate: [authGuard],
     loadComponent: () =>
-      import('./features/dashboard/dashboard').then((m) => m.DashboardComponent),
+      import('./features/dashboard/dashboard-shell').then(
+        (m) => m.DashboardShellComponent,
+      ),
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('./features/dashboard/dashboard').then(
+            (m) => m.DashboardComponent,
+          ),
+      },
+    ],
   },
   { path: '**', redirectTo: '' },
 ];

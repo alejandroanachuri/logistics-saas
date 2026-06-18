@@ -1,0 +1,85 @@
+<div class="flex h-screen bg-background text-on-surface">
+  <!-- Sidebar -->
+  <aside class="flex w-60 flex-col border-r border-outline-variant bg-surface-container-lowest">
+    <div class="flex h-16 items-center border-b border-outline-variant px-6">
+      <span class="text-lg font-semibold text-on-surface">Logística SaaS</span>
+    </div>
+
+    <nav class="flex-1 space-y-1 overflow-y-auto p-3" aria-label="Navegación principal">
+      @for (item of navItems(); track item.route) {
+        @if (item.disabled) {
+          <button
+            type="button"
+            disabled
+            [attr.aria-disabled]="true"
+            [title]="item.disabledHint ?? 'Próximamente'"
+            class="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-on-surface-variant opacity-50 cursor-not-allowed"
+          >
+            <span aria-hidden="true" class="text-base">{{ item.icon }}</span>
+            <span>{{ item.label }}</span>
+            <span class="ml-auto text-xs font-normal text-on-surface-variant">(próximamente)</span>
+          </button>
+        } @else {
+          <a
+            [routerLink]="item.route"
+            routerLinkActive="bg-primary-container text-on-primary-container"
+            [routerLinkActiveOptions]="{ exact: false }"
+            class="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-on-surface hover:bg-surface-container-low"
+          >
+            <span aria-hidden="true" class="text-base">{{ item.icon }}</span>
+            <span>{{ item.label }}</span>
+          </a>
+        }
+      }
+    </nav>
+
+    <div class="border-t border-outline-variant p-3">
+      @if (authStore.currentUser(); as user) {
+        <div class="mb-2 px-3 py-1">
+          <p class="truncate text-sm font-medium text-on-surface">{{ user.firstName }}</p>
+          @if (tenantStore.currentTenant(); as t) {
+            <p class="truncate text-xs text-on-surface-variant">{{ t.slug }}</p>
+          }
+        </div>
+        <app-button
+          variant="secondary"
+          size="sm"
+          [fullWidth]="true"
+          (click)="logout()"
+        >
+          Cerrar sesión
+        </app-button>
+      }
+    </div>
+  </aside>
+
+  <!-- Main column: header + content + footer -->
+  <div class="flex min-w-0 flex-1 flex-col">
+    <header class="flex h-16 items-center justify-between border-b border-outline-variant bg-surface-container-lowest px-8">
+      <h1 class="text-2xl font-semibold text-on-surface">{{ pageTitle() }}</h1>
+      <div class="text-sm text-on-surface-variant">
+        @if (tenantStore.currentTenant(); as t) {
+          <span>{{ t.legalName }}</span>
+        } @else {
+          <span>Logística SaaS</span>
+        }
+      </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto px-8 py-8">
+      <div class="mx-auto w-full max-w-[1120px]">
+        <router-outlet />
+      </div>
+    </main>
+
+    <footer class="border-t border-outline-variant bg-surface-container-lowest px-8 py-4">
+      <div class="flex flex-wrap items-center justify-between gap-4 text-xs text-on-surface-variant">
+        <div>© {{ currentYear }} Logística SaaS · v{{ appVersion }}</div>
+        <nav class="flex items-center gap-4" aria-label="Links legales">
+          <a routerLink="/terms" class="hover:text-on-surface">Términos</a>
+          <a routerLink="/privacy" class="hover:text-on-surface">Privacidad</a>
+        </nav>
+      </div>
+    </footer>
+  </div>
+</div>
