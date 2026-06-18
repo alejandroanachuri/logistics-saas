@@ -1,3 +1,126 @@
-/* You can add global styles to this file, and also import other style files */
+/* Logistics Core System — design tokens
+ *
+ * Implements the tokens from /DESIGN.md (root of the monorepo)
+ * as Tailwind v4 @theme directives + CSS custom properties.
+ * The tokens are consumed via Tailwind's utility classes
+ * (e.g. `bg-primary`, `text-on-surface`, `rounded-md`,
+ * `shadow-elev-1`) AND via the CSS custom properties
+ * (`--color-primary`, `--shadow-elev-1`, etc.) for any
+ * non-Tailwind consumer.
+ *
+ * Conventions:
+ * - Token names mirror the YAML keys in /DESIGN.md.
+ * - On-{role} tokens are explicit (no "text color follows
+ *   background color" auto-pairing); component code picks
+ *   the pair per design.
+ * - Font is Inter, self-hosted via @fontsource/inter
+ *   (no Google Fonts CDN dependency).
+ */
 
-@import "tailwindcss";
+/* --- Tailwind v4 core (must come before any @theme block). --- */
+@import 'tailwindcss';
+
+/* --- Fonts: load the 3 weights the DESIGN.md uses (400, 500, 600). --- */
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+
+@theme {
+  /* Brand & status colors (raw hex from DESIGN.md). */
+  --color-surface: #faf8ff;
+  --color-surface-dim: #d2d9f4;
+  --color-surface-bright: #faf8ff;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f2f3ff;
+  --color-surface-container: #eaedff;
+  --color-surface-container-high: #e2e7ff;
+  --color-surface-container-highest: #dae2fd;
+  --color-on-surface: #131b2e;
+  --color-on-surface-variant: #434655;
+  --color-inverse-surface: #283044;
+  --color-inverse-on-surface: #eef0ff;
+  --color-outline: #737686;
+  --color-outline-variant: #c3c6d7;
+  --color-surface-tint: #0053db;
+  --color-primary: #004ac6;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #2563eb;
+  --color-on-primary-container: #eeefff;
+  --color-inverse-primary: #b4c5ff;
+  --color-secondary: #505f76;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #d0e1fb;
+  --color-on-secondary-container: #54647a;
+  --color-tertiary: #006329;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #007f36;
+  --color-on-tertiary-container: #c7ffca;
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+  --color-primary-fixed: #dbe1ff;
+  --color-primary-fixed-dim: #b4c5ff;
+  --color-on-primary-fixed: #00174b;
+  --color-on-primary-fixed-variant: #003ea8;
+  --color-secondary-fixed: #d3e4fe;
+  --color-secondary-fixed-dim: #b7c8e1;
+  --color-on-secondary-fixed: #0b1c30;
+  --color-on-secondary-fixed-variant: #38485d;
+  --color-tertiary-fixed: #7ffc97;
+  --color-tertiary-fixed-dim: #62df7d;
+  --color-on-tertiary-fixed: #002109;
+  --color-on-tertiary-fixed-variant: #005320;
+  --color-background: #faf8ff;
+  --color-on-background: #131b2e;
+  --color-surface-variant: #dae2fd;
+
+  /* Radii from DESIGN.md. */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+
+  /* Spacing scale (4px / 8px incremental). */
+  --spacing-base: 4px;
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+
+  /* Typography families. */
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Custom shadow for floating elements (per DESIGN.md §"Elevation"). */
+  --shadow-elev-1: 0 4px 6px -1px rgb(15 23 42 / 0.10), 0 2px 4px -2px rgb(15 23 42 / 0.05);
+  --shadow-elev-2: 0 10px 15px -3px rgb(15 23 42 / 0.10), 0 4px 6px -4px rgb(15 23 42 / 0.05);
+}
+
+/* --- App-wide base styles. --- */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--color-on-background);
+  background-color: var(--color-background);
+}
+
+/* Tabular figures for data-dense layouts (tracking numbers, etc.). */
+.tabular-nums {
+  font-feature-settings: 'tnum' on, 'lnum' on;
+}
+
+/* Reusable elevation utility (consumed by card / modal / dropdown). */
+.elev-1 {
+  box-shadow: var(--shadow-elev-1);
+}
+.elev-2 {
+  box-shadow: var(--shadow-elev-2);
+}
