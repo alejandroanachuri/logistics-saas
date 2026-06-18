@@ -12,6 +12,7 @@ import { Router } from '@angular/router';
 import { CompanyStepComponent } from '../steps/company-step';
 import { AdminStepComponent } from '../steps/admin-step';
 import { ConfirmationStepComponent } from '../steps/confirmation-step';
+import { CardComponent } from '../../../shared/ui/card';
 import { RegistrationService } from '../../../core/services/registration.service';
 import { ApiErrorEnvelope, RegisterRequest, RegisterResponse } from '../../../core/types';
 
@@ -124,7 +125,7 @@ export function findTargetStep(details: Record<string, string> | undefined): num
   selector: 'app-register',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CompanyStepComponent, AdminStepComponent, ConfirmationStepComponent],
+  imports: [CardComponent, CompanyStepComponent, AdminStepComponent, ConfirmationStepComponent],
   templateUrl: './register.html',
 })
 export class RegisterComponent {

@@ -1,177 +1,181 @@
-<main class="w-full max-w-3xl" data-testid="register-wizard">
-  <h1 class="text-2xl font-semibold text-slate-900">Registrar empresa</h1>
-  <p class="mt-2 text-sm text-slate-600">
-    Creá tu cuenta de empresa en tres pasos: datos fiscales, datos del administrador y confirmación.
-  </p>
-
-  @if (successResponse(); as resp) {
-    <section
-      role="status"
-      aria-live="polite"
-      class="mt-8 rounded-lg border border-green-200 bg-green-50 p-6"
-      data-testid="register-success"
-    >
-      <h2 class="text-xl font-semibold text-green-900">¡Cuenta creada!</h2>
-      <p class="mt-2 text-sm text-green-800">
-        Tu empresa <strong>{{ resp.slug }}</strong> ya está activa.
+<div class="mx-auto w-full max-w-3xl px-4 py-16">
+  <app-card>
+    <main data-testid="register-wizard">
+      <h1 class="text-2xl font-semibold text-on-surface">Registrar empresa</h1>
+      <p class="mt-2 text-sm text-on-surface-variant">
+        Creá tu cuenta de empresa en tres pasos: datos fiscales, datos del administrador y confirmación.
       </p>
-      <p class="mt-2 text-sm text-green-800">
-        Para iniciar sesión, ingresá con el usuario que elegiste.
-      </p>
-      <button
-        type="button"
-        (click)="goToLogin()"
-        data-testid="go-login"
-        class="mt-4 rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
-      >
-        Ir a iniciar sesión
-      </button>
-    </section>
-  } @else {
-    <!--
-      Stepper header: 3 labels (Empresa, Administrador,
-      Confirmación). The active label gets a blue
-      underline. The header is purely presentational;
-      the form-validity gating is enforced by
-      {@code canAdvance} in the TS.
-    -->
-    <ol
-      class="mt-6 flex items-center gap-3 text-sm"
-      data-testid="stepper-header"
-      aria-label="Pasos del registro"
-    >
-      <li
-        class="rounded-md px-2 py-1"
-        [class.font-semibold]="currentStepIndex() === 0"
-        [class.text-slate-900]="currentStepIndex() === 0"
-        [class.text-slate-500]="currentStepIndex() !== 0"
-        data-testid="step-label-company"
-      >
-        1. Empresa
-      </li>
-      <li class="text-slate-300">›</li>
-      <li
-        class="rounded-md px-2 py-1"
-        [class.font-semibold]="currentStepIndex() === 1"
-        [class.text-slate-900]="currentStepIndex() === 1"
-        [class.text-slate-500]="currentStepIndex() !== 1"
-        data-testid="step-label-admin"
-      >
-        2. Administrador
-      </li>
-      <li class="text-slate-300">›</li>
-      <li
-        class="rounded-md px-2 py-1"
-        [class.font-semibold]="currentStepIndex() === 2"
-        [class.text-slate-900]="currentStepIndex() === 2"
-        [class.text-slate-500]="currentStepIndex() !== 2"
-        data-testid="step-label-confirmation"
-      >
-        3. Confirmación
-      </li>
-    </ol>
 
-    <!--
-      The wizard keeps all 3 step bodies in the DOM
-      at all times and toggles the {@code hidden}
-      attribute (a class via {@code [class.hidden]})
-      to show only the active step. The 3 forms are
-      always live; the {@code @ViewChild} references
-      resolve as soon as the wizard's first change
-      detection cycle runs. We DO NOT use
-      {@code @if (... === 0) { ... }} for the step
-      bodies because that would prevent Angular from
-      instantiating the inactive step components,
-      which would break the {@code @ViewChild}
-      references the submit() flow relies on.
-
-      The AdminStep's {@code [tenantSlug]} input
-      re-reads the companyForm's slug on every change
-      detection cycle so a stepper-side slug change
-      propagates to the AdminStep's async username
-      validator (per PR12b2 Discovery #34).
-    -->
-    <div data-testid="step-body-company" class="mt-4" [class.hidden]="currentStepIndex() !== 0">
-      <app-company-step
-        [fieldErrors]="projectedFieldErrorsForStep(0)"
-      ></app-company-step>
-    </div>
-    <div data-testid="step-body-admin" class="mt-4" [class.hidden]="currentStepIndex() !== 1">
-      <app-admin-step
-        [tenantSlug]="tenantSlug()"
-        [fieldErrors]="projectedFieldErrorsForStep(1)"
-      ></app-admin-step>
-    </div>
-    <div data-testid="step-body-confirmation" class="mt-4" [class.hidden]="currentStepIndex() !== 2">
-      <app-confirmation-step
-        [companyForm]="companyStep?.form!"
-        [adminForm]="adminStep?.form!"
-      ></app-confirmation-step>
-    </div>
-
-    <!--
-      Top-level error region — PR11c Discovery #23
-      pattern, same as the login and step components.
-      Always rendered with min-h so the layout does
-      not jump when the copy appears or disappears.
-    -->
-    <div
-      role="status"
-      aria-live="polite"
-      class="min-h-[1.25rem] mt-2 text-sm text-red-600"
-      data-testid="register-error"
-    >
-      {{ submitError() }}
-    </div>
-
-    <!--
-      Action row. The wizard's own navigation
-      (Atrás / Siguiente / Crear cuenta) is rendered
-      here. The Siguiente / Atrás buttons mutate
-      {@code currentStepIndex}; the "Crear cuenta"
-      button only renders on the last step (and only
-      when the consent form is valid); it calls
-      {@code submit()} directly.
-
-      The buttons are hidden while {@code isLoading()}
-      is true; a "Creando cuenta..." indicator takes
-      their place.
-    -->
-    <div class="mt-6 flex items-center justify-between">
-      @if (isLoading()) {
-        <span class="text-sm text-slate-600" data-testid="loading">Creando cuenta...</span>
-      } @else {
-        <button
-          type="button"
-          (click)="previous()"
-          [disabled]="currentStepIndex() === 0"
-          data-testid="stepper-prev"
-          class="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+      @if (successResponse(); as resp) {
+        <section
+          role="status"
+          aria-live="polite"
+          class="mt-8 rounded-lg border border-tertiary-container bg-tertiary-container p-6"
+          data-testid="register-success"
         >
-          Atrás
-        </button>
-        @if (currentStepIndex() < 2) {
+          <h2 class="text-xl font-semibold text-on-tertiary-container">¡Cuenta creada!</h2>
+          <p class="mt-2 text-sm text-on-tertiary-container">
+            Tu empresa <strong>{{ resp.slug }}</strong> ya está activa.
+          </p>
+          <p class="mt-2 text-sm text-on-tertiary-container">
+            Para iniciar sesión, ingresá con el usuario que elegiste.
+          </p>
           <button
             type="button"
-            (click)="next()"
-            [disabled]="!canAdvance()"
-            data-testid="stepper-next"
-            class="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300"
+            (click)="goToLogin()"
+            data-testid="go-login"
+            class="mt-4 inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-on-primary hover:bg-primary-fixed-dim focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           >
-            Siguiente
+            Ir a iniciar sesión
           </button>
-        } @else {
-          <button
-            type="button"
-            (click)="submit()"
-            [disabled]="!canSubmit()"
-            data-testid="submit-create"
-            class="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300"
+        </section>
+      } @else {
+        <!--
+          Stepper header: 3 labels (Empresa, Administrador,
+          Confirmación). The active label gets a blue
+          underline. The header is purely presentational;
+          the form-validity gating is enforced by
+          {@code canAdvance} in the TS.
+        -->
+        <ol
+          class="mt-6 flex items-center gap-3 text-sm"
+          data-testid="stepper-header"
+          aria-label="Pasos del registro"
+        >
+          <li
+            class="rounded-md px-2 py-1"
+            [class.font-semibold]="currentStepIndex() === 0"
+            [class.text-on-surface]="currentStepIndex() === 0"
+            [class.text-on-surface-variant]="currentStepIndex() !== 0"
+            data-testid="step-label-company"
           >
-            Crear cuenta
-          </button>
-        }
+            1. Empresa
+          </li>
+          <li class="text-outline-variant">›</li>
+          <li
+            class="rounded-md px-2 py-1"
+            [class.font-semibold]="currentStepIndex() === 1"
+            [class.text-on-surface]="currentStepIndex() === 1"
+            [class.text-on-surface-variant]="currentStepIndex() !== 1"
+            data-testid="step-label-admin"
+          >
+            2. Administrador
+          </li>
+          <li class="text-outline-variant">›</li>
+          <li
+            class="rounded-md px-2 py-1"
+            [class.font-semibold]="currentStepIndex() === 2"
+            [class.text-on-surface]="currentStepIndex() === 2"
+            [class.text-on-surface-variant]="currentStepIndex() !== 2"
+            data-testid="step-label-confirmation"
+          >
+            3. Confirmación
+          </li>
+        </ol>
+
+        <!--
+          The wizard keeps all 3 step bodies in the DOM
+          at all times and toggles the {@code hidden}
+          attribute (a class via {@code [class.hidden]})
+          to show only the active step. The 3 forms are
+          always live; the {@code @ViewChild} references
+          resolve as soon as the wizard's first change
+          detection cycle runs. We DO NOT use
+          {@code @if (... === 0) { ... }} for the step
+          bodies because that would prevent Angular from
+          instantiating the inactive step components,
+          which would break the {@code @ViewChild}
+          references the submit() flow relies on.
+
+          The AdminStep's {@code [tenantSlug]} input
+          re-reads the companyForm's slug on every change
+          detection cycle so a stepper-side slug change
+          propagates to the AdminStep's async username
+          validator (per PR12b2 Discovery #34).
+        -->
+        <div data-testid="step-body-company" class="mt-4" [class.hidden]="currentStepIndex() !== 0">
+          <app-company-step
+            [fieldErrors]="projectedFieldErrorsForStep(0)"
+          ></app-company-step>
+        </div>
+        <div data-testid="step-body-admin" class="mt-4" [class.hidden]="currentStepIndex() !== 1">
+          <app-admin-step
+            [tenantSlug]="tenantSlug()"
+            [fieldErrors]="projectedFieldErrorsForStep(1)"
+          ></app-admin-step>
+        </div>
+        <div data-testid="step-body-confirmation" class="mt-4" [class.hidden]="currentStepIndex() !== 2">
+          <app-confirmation-step
+            [companyForm]="companyStep?.form!"
+            [adminForm]="adminStep?.form!"
+          ></app-confirmation-step>
+        </div>
+
+        <!--
+          Top-level error region — PR11c Discovery #23
+          pattern, same as the login and step components.
+          Always rendered with min-h so the layout does
+          not jump when the copy appears or disappears.
+        -->
+        <div
+          role="status"
+          aria-live="polite"
+          class="min-h-[1.25rem] mt-2 text-sm text-error"
+          data-testid="register-error"
+        >
+          {{ submitError() }}
+        </div>
+
+        <!--
+          Action row. The wizard's own navigation
+          (Atrás / Siguiente / Crear cuenta) is rendered
+          here. The Siguiente / Atrás buttons mutate
+          {@code currentStepIndex}; the "Crear cuenta"
+          button only renders on the last step (and only
+          when the consent form is valid); it calls
+          {@code submit()} directly.
+
+          The buttons are hidden while {@code isLoading()}
+          is true; a "Creando cuenta..." indicator takes
+          their place.
+        -->
+        <div class="mt-6 flex items-center justify-between">
+          @if (isLoading()) {
+            <span class="text-sm text-on-surface-variant" data-testid="loading">Creando cuenta...</span>
+          } @else {
+            <button
+              type="button"
+              (click)="previous()"
+              [disabled]="currentStepIndex() === 0"
+              data-testid="stepper-prev"
+              class="inline-flex items-center justify-center rounded-md border border-outline-variant bg-surface-container-lowest px-4 py-2 text-sm font-medium text-on-surface hover:bg-surface-container-low focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Atrás
+            </button>
+            @if (currentStepIndex() < 2) {
+              <button
+                type="button"
+                (click)="next()"
+                [disabled]="!canAdvance()"
+                data-testid="stepper-next"
+                class="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-on-primary hover:bg-primary-fixed-dim focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Siguiente
+              </button>
+            } @else {
+              <button
+                type="button"
+                (click)="submit()"
+                [disabled]="!canSubmit()"
+                data-testid="submit-create"
+                class="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-on-primary hover:bg-primary-fixed-dim focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Crear cuenta
+              </button>
+            }
+          }
+        </div>
       }
-    </div>
-  }
-</main>
+    </main>
+  </app-card>
+</div>
