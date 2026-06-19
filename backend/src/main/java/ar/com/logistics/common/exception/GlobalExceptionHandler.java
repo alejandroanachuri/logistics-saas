@@ -14,10 +14,15 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  * Centralised mapping from application / Spring exceptions to
  * {@link ErrorEnvelope} responses.
  *
- * <p>Three responsibilities:
+ * <p>Four responsibilities:
  * <ol>
  *   <li>Turn {@link BusinessException} (and subclasses) into a
  *       response with the correct HTTP status and envelope body.</li>
+ *   <li>Turn {@link BusinessRuleException} (the service-layer
+ *       placeholder that carries a {@code String code} instead of an
+ *       {@link ErrorCode}) into a response by looking the code up in
+ *       the {@link ErrorCode} catalog. Falls back to 500 on an
+ *       unknown code (defensive — should never happen).</li>
  *   <li>Map Bean-Validation failures ({@link MethodArgumentNotValidException})
  *       to {@code 400 VALIDATION_ERROR} with a per-field details map.</li>
  *   <li>Catch-all {@link Exception} → {@code 500 INTERNAL_ERROR}. The
@@ -44,6 +49,42 @@ public class GlobalExceptionHandler {
             }
         }
         return new ResponseEntity<>(body, headers, status);
+    }
+
+    /**
+     * Map {@link BusinessRuleException} (the service-layer placeholder
+     * that carries a {@code String code} — see {@code BusinessRuleException}
+     * javadoc) to the canonical {@link ErrorEnvelope} response. The
+     * lookup strategy uses {@link ErrorCode#valueOf(String)} on the
+     * canonical wire-format code, so the service-layer and the catalog
+     * must agree on the spelling.
+     *
+     * <p>On an unknown code (which is a service-layer bug — every code
+     * MUST be in the catalog) the handler falls back to
+     * {@code 500 INTERNAL_ERROR} with the raw code embedded in the
+     * message so the failure is loud in the audit log rather than
+     * crashing the handler with an {@link IllegalArgumentException}.
+     */
+    @ExceptionHandler(BusinessRuleException.class)
+    public ResponseEntity<ErrorEnvelope> handleBusinessRule(BusinessRuleException ex) {
+        ErrorCode mapped;
+        try {
+            mapped = ErrorCode.valueOf(ex.code());
+        } catch (IllegalArgumentException unknownCode) {
+            // Defensive — the contract is "every code is in the catalog".
+            // Don't propagate the IAE (that would surface as a 500 stack
+            // trace to the client); instead return a sanitized 500 with
+            // the unknown code visible in the message for debugging.
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorEnvelope(new ErrorEnvelope.ErrorBody(
+                            ErrorCode.INTERNAL_ERROR.code(),
+                            "Unmapped BusinessRuleException code: " + ex.code(),
+                            ex.details())));
+        }
+        HttpStatus status = HttpStatus.valueOf(mapped.httpStatus());
+        ErrorEnvelope body =
+                new ErrorEnvelope(new ErrorEnvelope.ErrorBody(mapped.code(), ex.getMessage(), ex.details()));
+        return ResponseEntity.status(status).body(body);
     }
 
     /**
