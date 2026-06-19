@@ -66,7 +66,33 @@ public enum ErrorCode {
     RATE_LIMIT_EXCEEDED(429, "RATE_LIMIT_EXCEEDED", "Rate limit exceeded. Try again later."),
 
     /** 500 — unhandled server-side failure. */
-    INTERNAL_ERROR(500, "INTERNAL_ERROR", "Internal server error.");
+    INTERNAL_ERROR(500, "INTERNAL_ERROR", "Internal server error."),
+
+    // -- Etapa 2: team management (PR-3 controllers) ---------------
+
+    /** 404 — company user not found (or belongs to another tenant). */
+    USER_NOT_FOUND(404, "USER_NOT_FOUND", "User not found."),
+
+    /** 400 — one or more role ids in the request are invalid (PLATFORM scope or non-existent). */
+    INVALID_ROLE(400, "INVALID_ROLE", "One or more role ids are invalid."),
+
+    /** 409 — user is already DISABLED. */
+    USER_ALREADY_DISABLED(409, "USER_ALREADY_DISABLED", "User is already disabled."),
+
+    /** 409 — user is already ACTIVE. */
+    USER_ALREADY_ACTIVE(409, "USER_ALREADY_ACTIVE", "User is already active."),
+
+    /** 403 — admin attempted to PATCH their own user row. */
+    SELF_EDIT_BLOCKED(403, "SELF_EDIT_BLOCKED", "You cannot edit your own user from this endpoint."),
+
+    /** 403 — admin attempted to disable their own user row. */
+    SELF_DISABLE_BLOCKED(403, "SELF_DISABLE_BLOCKED", "You cannot disable your own user."),
+
+    /** 403 — first admin of the tenant is protected from this mutation (email/username/role immutable). */
+    FIRST_ADMIN_PROTECTED(403, "FIRST_ADMIN_PROTECTED", "The first admin of the tenant is protected from this action."),
+
+    /** 403 — the tenant must always retain at least one active COMPANY_ADMIN. */
+    LAST_ADMIN_PROTECTED(403, "LAST_ADMIN_PROTECTED", "The tenant must always have at least one active COMPANY_ADMIN.");
 
     private final int httpStatus;
     private final String code;
