@@ -5,8 +5,11 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 import javax.crypto.SecretKey;
 import org.springframework.stereotype.Service;
@@ -72,14 +75,33 @@ public class JwtService {
         }
     }
 
-    /** Issues a company-scope access token. */
-    public String issueCompanyToken(UUID userId, UUID tenantId, String tenantSlug, String role) {
+    /**
+     * Issues a company-scope access token.
+     *
+     * <p>The {@code roles} parameter is the multi-role list assigned
+     * to the user (etapa-2 onward). The JWT carries:
+     * <ul>
+     *   <li>{@code roles} — a JSON array of role names (canonical
+     *       contract from PR-3 onward).</li>
+     *   <li>{@code role} — the first/primary role as a string, kept
+     *       for backwards-compat with single-role clients that have
+     *       not yet migrated to the new claim shape.</li>
+     * </ul>
+     * When {@code roles} is null or empty the call falls back to an
+     * empty list (the {@code role} claim stays null — the legacy
+     * clients treat null as "no role" and the new clients treat an
+     * empty list the same way).
+     */
+    public String issueCompanyToken(UUID userId, UUID tenantId, String tenantSlug, List<String> roles) {
         Instant now = Instant.now();
+        List<String> normalized = roles == null ? List.of() : List.copyOf(roles);
+        String primaryRole = normalized.isEmpty() ? null : normalized.get(0);
         return Jwts.builder()
                 .subject(userId.toString())
                 .claim("tid", tenantId.toString())
                 .claim("slug", tenantSlug)
-                .claim("role", role)
+                .claim("role", primaryRole)
+                .claim("roles", normalized)
                 .claim("scope", "COMPANY")
                 .issuer(issuer)
                 .audience()
@@ -112,6 +134,14 @@ public class JwtService {
      * Parses and verifies the token, returning the typed claims. Throws
      * {@link io.jsonwebtoken.JwtException} on any problem (bad signature,
      * expired, malformed). Callers map to the appropriate {@code ErrorCode}.
+     *
+     * <p>Multi-role handling (etapa-2 PR-3 onward): the JWT carries
+     * both {@code role} (legacy single string, kept for backwards-compat)
+     * AND {@code roles} (the canonical list). When the token is a fresh
+     * PR-3 token both fields are populated; when it's an old (pre-PR-3)
+     * token the {@code roles} claim is missing and the parser wraps the
+     * single {@code role} value in a singleton list so callers always
+     * see a {@code List<String>}.
      */
     public ParsedToken parseAndVerify(String token) {
         Claims c = Jwts.parser()
@@ -122,16 +152,47 @@ public class JwtService {
         String scopeStr = c.get("scope", String.class);
         TokenScope scope = scopeStr == null ? null : TokenScope.valueOf(scopeStr);
         UUID tid = c.get("tid") == null ? null : UUID.fromString(c.get("tid", String.class));
+        String legacyRole = c.get("role", String.class);
+        List<String> roles = extractRoles(c, legacyRole);
         return new ParsedToken(
                 UUID.fromString(c.getSubject()),
                 tid,
                 c.get("slug", String.class),
-                c.get("role", String.class),
+                legacyRole,
+                roles,
                 scope,
                 c.getIssuer(),
                 c.getAudience() == null
                         ? null
                         : c.getAudience().stream().findFirst().orElse(null));
+    }
+
+    /**
+     * Resolve the {@code roles[]} claim to a {@link List<String>}.
+     * Falls back to a singleton list wrapping the legacy {@code role}
+     * claim when the token is pre-PR-3 (no {@code roles} claim).
+     * Returns an empty list when neither claim is set.
+     */
+    @SuppressWarnings("unchecked")
+    private static List<String> extractRoles(Claims c, String legacyRole) {
+        Object raw = c.get("roles");
+        if (raw instanceof List<?> list) {
+            // Each element is the role name (Jackson deserialises
+            // JSON string arrays to List<String>). Defensive cast.
+            List<String> out = new ArrayList<>(list.size());
+            for (Object e : list) {
+                if (e != null) {
+                    out.add(e.toString());
+                }
+            }
+            return Collections.unmodifiableList(out);
+        }
+        // No roles[] claim — wrap the legacy role in a singleton
+        // list (or empty if also missing) so the contract is stable.
+        if (legacyRole != null && !legacyRole.isBlank()) {
+            return List.of(legacyRole);
+        }
+        return List.of();
     }
 
     public enum TokenScope {
@@ -143,12 +204,18 @@ public class JwtService {
      * Typed projection of the relevant claims. The raw {@code Claims}
      * object is intentionally not exposed; callers see a stable record
      * shape and cannot accidentally leak a verification artifact.
+     *
+     * <p>Multi-role projection (etapa-2 PR-3 onward): both the
+     * legacy single {@code role} field and the canonical {@code roles}
+     * list are exposed. {@code role} is always the first element of
+     * {@code roles} (or null when the list is empty).
      */
     public record ParsedToken(
             UUID subject,
             UUID tenantId,
             String tenantSlug,
             String role,
+            List<String> roles,
             TokenScope scope,
             String issuer,
             String audience) {}

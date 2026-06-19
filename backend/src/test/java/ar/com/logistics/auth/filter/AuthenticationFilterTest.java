@@ -49,9 +49,11 @@ class AuthenticationFilterTest {
                 "logistics-saas-web");
         jwtService = new JwtService(props);
         tenantId = UUID.randomUUID();
-        validCompanyToken = jwtService.issueCompanyToken(UUID.randomUUID(), tenantId, "acme", "COMPANY_ADMIN");
+        validCompanyToken =
+                jwtService.issueCompanyToken(UUID.randomUUID(), tenantId, "acme", java.util.List.of("COMPANY_ADMIN"));
         validPlatformToken = jwtService.issuePlatformToken(UUID.randomUUID(), "PLATFORM_ADMIN");
-        mismatchedIssuerToken = jwtService.issueCompanyToken(UUID.randomUUID(), tenantId, "acme", "COMPANY_ADMIN");
+        mismatchedIssuerToken =
+                jwtService.issueCompanyToken(UUID.randomUUID(), tenantId, "acme", java.util.List.of("COMPANY_ADMIN"));
         filter = new AuthenticationFilter(jwtService);
     }
 

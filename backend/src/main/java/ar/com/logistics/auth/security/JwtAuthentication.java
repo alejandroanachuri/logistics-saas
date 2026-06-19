@@ -46,16 +46,27 @@ public final class JwtAuthentication extends AbstractAuthenticationToken {
 
     /**
      * Build a {@code JwtAuthentication} from a verified
-     * {@link ParsedToken}. The role claim (e.g.
-     * {@code COMPANY_ADMIN}) becomes {@code ROLE_COMPANY_ADMIN};
-     * the scope claim (e.g. {@code COMPANY}) becomes
+     * {@link ParsedToken}. Every role in the {@code roles[]} claim
+     * (e.g. {@code COMPANY_ADMIN}) becomes a {@code ROLE_<name>}
+     * authority; the scope claim (e.g. {@code COMPANY}) becomes
      * {@code SCOPE_COMPANY}. The principal is the typed
      * {@link ParsedToken} record.
+     *
+     * <p>Etapa-2 onward (PR-3): every role in the token's
+     * {@code roles[]} claim gets its own {@code ROLE_<name>}
+     * authority, not just the first one. The single-role legacy
+     * {@code token.role()} field is no longer consulted here — the
+     * parser has already merged it into {@code roles} when the
+     * token is pre-PR-3.
      */
     public static JwtAuthentication create(ParsedToken token) {
-        List<GrantedAuthority> authorities = new ArrayList<>(2);
-        if (token.role() != null && !token.role().isBlank()) {
-            authorities.add(new SimpleGrantedAuthority("ROLE_" + token.role()));
+        List<GrantedAuthority> authorities = new ArrayList<>();
+        if (token.roles() != null) {
+            for (String role : token.roles()) {
+                if (role != null && !role.isBlank()) {
+                    authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
+                }
+            }
         }
         if (token.scope() == TokenScope.COMPANY) {
             authorities.add(new SimpleGrantedAuthority("SCOPE_COMPANY"));
@@ -94,5 +105,15 @@ public final class JwtAuthentication extends AbstractAuthenticationToken {
      */
     public UUID tenantIdOrNull() {
         return principal == null ? null : principal.tenantId();
+    }
+
+    /**
+     * Convenience: the role names from the JWT as a {@code List<String>}.
+     * Returns an empty list for a token with no roles (defensive —
+     * shouldn't happen for a verified access token, but the parser
+     * has the same contract).
+     */
+    public java.util.List<String> getRoles() {
+        return principal == null || principal.roles() == null ? java.util.List.of() : principal.roles();
     }
 }

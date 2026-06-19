@@ -1,5 +1,6 @@
 package ar.com.logistics.auth.dto;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -12,6 +13,11 @@ import java.util.UUID;
  * the body — they live in HttpOnly cookies. The body carries
  * {@code expiresIn} (seconds until access-token expiry) so the
  * frontend can schedule a refresh.
+ *
+ * <p>Etapa-2 (PR-3) breaking change: the singular {@code role: String}
+ * field has been replaced with {@code roles: List<String>} to support
+ * the multi-role junction introduced in PR-1. Existing single-role
+ * users continue to receive a singleton list (one element).
  */
 public record LoginResponse(User user, long expiresIn) {
 
@@ -28,7 +34,7 @@ public record LoginResponse(User user, long expiresIn) {
             String email,
             String firstName,
             String lastName,
-            String role,
+            List<String> roles,
             String scope,
             boolean emailVerified) {}
 }

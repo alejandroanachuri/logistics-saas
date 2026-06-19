@@ -154,6 +154,12 @@ public class AuthController {
     }
 
     private static LoginResponse buildLoginResponse(LoginService.LoginResult r) {
+        // Etapa-2 PR-3 breaking change: the wire shape carries
+        // `roles[]` (list of role names) instead of the singular
+        // `role` (string). For the v1 single-role path we project
+        // the user's primary role as a singleton list. PR-4 will
+        // hydrate the full multi-role list from the junction.
+        String primaryRole = r.role().getName();
         return new LoginResponse(
                 new LoginResponse.User(
                         r.user().getId(),
@@ -163,7 +169,7 @@ public class AuthController {
                         r.user().getEmail(),
                         r.user().getFirstName(),
                         r.user().getLastName(),
-                        r.role().getName(),
+                        java.util.List.of(primaryRole),
                         "COMPANY",
                         r.user().isEmailVerified()),
                 r.expiresIn());
@@ -206,7 +212,7 @@ public class AuthController {
                 token.tenantId(),
                 token.tenantSlug(),
                 token.audience(),
-                token.role(),
+                token.roles(),
                 token.scope() == null ? "COMPANY" : token.scope().name(),
                 expiresIn);
         return ResponseEntity.ok(new MeResponse(user));

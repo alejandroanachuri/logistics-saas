@@ -193,9 +193,11 @@ public class LoginService {
         user.setLastLoginAt(Instant.now());
         userAdminRepository.save(user);
 
-        // 8. Issue access token.
-        String accessToken =
-                jwtService.issueCompanyToken(user.getId(), tenant.getId(), tenant.getSlug(), role.getName());
+        // 8. Issue access token. Multi-role (etapa-2 PR-3): wrap the
+        //    single role name in a singleton list so the JWT carries
+        //    both `role` (legacy) and `roles[]` (canonical) claims.
+        String accessToken = jwtService.issueCompanyToken(
+                user.getId(), tenant.getId(), tenant.getSlug(), java.util.List.of(role.getName()));
 
         // 9. Audit success.
         auditLogger.logAsync(new AuditEvent(

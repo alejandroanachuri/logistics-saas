@@ -1,5 +1,6 @@
 package ar.com.logistics.auth.dto;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -20,9 +21,18 @@ import java.util.UUID;
  * does NOT round-trip through the database. A future
  * {@code /api/v1/company-users/me} endpoint would query the DB
  * and return a richer shape.
+ *
+ * <p>Etapa-2 (PR-3) breaking change: the singular {@code role: String}
+ * field has been replaced with {@code roles: List<String>}.
  */
 public record MeResponse(User user) {
 
     public record User(
-            UUID id, UUID tenantId, String tenantSlug, String username, String role, String scope, long expiresIn) {}
+            UUID id,
+            UUID tenantId,
+            String tenantSlug,
+            String username,
+            List<String> roles,
+            String scope,
+            long expiresIn) {}
 }

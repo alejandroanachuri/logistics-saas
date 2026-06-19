@@ -187,9 +187,11 @@ public class RefreshTokenService {
         match.setReplacedBy(newRowId);
         refreshTokenRepo.save(match);
 
-        // Issue the new access token.
-        String accessToken =
-                jwtService.issueCompanyToken(user.getId(), tenant.getId(), tenant.getSlug(), role.getName());
+        // Issue the new access token. Multi-role (etapa-2 PR-3): wrap
+        // the single role name in a singleton list so the JWT carries
+        // both `role` (legacy) and `roles[]` (canonical) claims.
+        String accessToken = jwtService.issueCompanyToken(
+                user.getId(), tenant.getId(), tenant.getSlug(), java.util.List.of(role.getName()));
 
         return new Refreshed(accessToken, newRawUuid, newExpiresAt, ACCESS_TTL_SECONDS, user, tenant, role);
     }

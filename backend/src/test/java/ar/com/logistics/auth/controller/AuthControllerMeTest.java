@@ -54,7 +54,7 @@ class AuthControllerMeTest {
     void companyCookie_principalIsTypedParsedToken() {
         UUID userId = UUID.randomUUID();
         UUID tenantId = UUID.randomUUID();
-        String token = jwtService.issueCompanyToken(userId, tenantId, "acme", "COMPANY_ADMIN");
+        String token = jwtService.issueCompanyToken(userId, tenantId, "acme", java.util.List.of("COMPANY_ADMIN"));
         ParsedToken parsed = jwtService.parseAndVerify(token);
 
         JwtAuthentication auth = JwtAuthentication.create(parsed);
@@ -122,7 +122,7 @@ class AuthControllerMeTest {
         // expressions downstream.
         UUID userId = UUID.randomUUID();
         UUID tenantId = UUID.randomUUID();
-        String company = jwtService.issueCompanyToken(userId, tenantId, "acme", "COMPANY_OPERATOR");
+        String company = jwtService.issueCompanyToken(userId, tenantId, "acme", java.util.List.of("COMPANY_OPERATOR"));
         JwtAuthentication auth = JwtAuthentication.create(jwtService.parseAndVerify(company));
         assertThat(auth.getAuthorities())
                 .as("role claim becomes ROLE_<role>")
