@@ -1,6 +1,7 @@
 package ar.com.logistics.auth.service;
 
 import ar.com.logistics.auth.domain.Role;
+import ar.com.logistics.auth.dto.RoleDto;
 import ar.com.logistics.auth.repository.company.CompanyUserRoleRepository;
 import ar.com.logistics.auth.repository.system.RoleRepository;
 import ar.com.logistics.common.exception.BusinessRuleException;
@@ -150,6 +151,26 @@ public class RoleAssignmentService {
                 out.add(new RoleRef(r.getId(), r.getName()));
             }
         }
+        return out;
+    }
+
+    /**
+     * Return every {@code Role} whose {@code scope = COMPANY} as a
+     * {@link RoleDto} list. Used by {@code GET /api/v1/roles} to
+     * populate the frontend's role multi-select on the create/edit
+     * user screens.
+     *
+     * <p>Result is ordered by role name so the wire-format is
+     * deterministic (ADMIN, DRIVER, OPERATOR, VIEWER) — the test
+     * pin asserts that ordering.
+     */
+    public List<RoleDto> listCompanyRoles() {
+        List<Role> rows = roleRepository.findAllByScope(Role.RoleScope.COMPANY);
+        List<RoleDto> out = new ArrayList<>(rows.size());
+        for (Role r : rows) {
+            out.add(new RoleDto(r.getId(), r.getName(), r.getDescription()));
+        }
+        out.sort((a, b) -> a.name().compareTo(b.name()));
         return out;
     }
 
