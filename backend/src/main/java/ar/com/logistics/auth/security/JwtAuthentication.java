@@ -116,4 +116,13 @@ public final class JwtAuthentication extends AbstractAuthenticationToken {
     public java.util.List<String> getRoles() {
         return principal == null || principal.roles() == null ? java.util.List.of() : principal.roles();
     }
+
+    /**
+     * Convenience: the current user's id (the JWT subject). Used
+     * by the controllers to pass the actor id to the service layer
+     * for audit + self-edit guards.
+     */
+    public UUID currentUserId() {
+        return principal == null ? null : principal.subject();
+    }
 }
