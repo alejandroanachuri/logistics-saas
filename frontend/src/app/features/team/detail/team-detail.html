@@ -1,0 +1,262 @@
+<section data-testid="team-detail" class="space-y-6">
+  <!-- Back link -->
+  <div>
+    <a
+      routerLink="/team"
+      class="inline-flex items-center text-sm font-medium text-primary hover:underline"
+      data-testid="back-link"
+    >
+      ← Volver al equipo
+    </a>
+  </div>
+
+  <!-- Header: name + status badge + role chips -->
+  <header class="flex flex-wrap items-start justify-between gap-3">
+    <div class="space-y-2">
+      <h1 class="text-2xl font-semibold text-on-surface" data-testid="user-name">
+        {{ displayName(user()) }}
+      </h1>
+      <p class="text-sm text-on-surface-variant">@{{ user()?.username }}</p>
+      <div class="flex flex-wrap items-center gap-2">
+        @if (user()) {
+          <app-status-badge [status]="user()!.status" />
+        }
+        @for (role of user()?.roles ?? []; track role.id) {
+          <app-role-chip [role]="role" />
+        }
+      </div>
+    </div>
+  </header>
+
+  <!-- Tabs -->
+  <div class="border-b border-outline-variant">
+    <nav class="flex gap-1" aria-label="Secciones del usuario">
+      <button
+        type="button"
+        data-testid="tab-info-button"
+        (click)="selectedTab.set('info')"
+        [attr.aria-current]="selectedTab() === 'info' ? 'page' : null"
+        [class.border-b-2]="selectedTab() === 'info'"
+        [class.border-primary]="selectedTab() === 'info'"
+        [class.text-primary]="selectedTab() === 'info'"
+        [class.text-on-surface-variant]="selectedTab() !== 'info'"
+        class="inline-flex h-10 items-center px-4 text-sm font-semibold"
+      >
+        Información
+      </button>
+      <button
+        type="button"
+        data-testid="tab-roles-button"
+        (click)="selectedTab.set('roles')"
+        [attr.aria-current]="selectedTab() === 'roles' ? 'page' : null"
+        [class.border-b-2]="selectedTab() === 'roles'"
+        [class.border-primary]="selectedTab() === 'roles'"
+        [class.text-primary]="selectedTab() === 'roles'"
+        [class.text-on-surface-variant]="selectedTab() !== 'roles'"
+        class="inline-flex h-10 items-center px-4 text-sm font-semibold"
+      >
+        Roles
+      </button>
+      <button
+        type="button"
+        data-testid="tab-security-button"
+        (click)="selectedTab.set('security')"
+        [attr.aria-current]="selectedTab() === 'security' ? 'page' : null"
+        [class.border-b-2]="selectedTab() === 'security'"
+        [class.border-primary]="selectedTab() === 'security'"
+        [class.text-primary]="selectedTab() === 'security'"
+        [class.text-on-surface-variant]="selectedTab() !== 'security'"
+        class="inline-flex h-10 items-center px-4 text-sm font-semibold"
+      >
+        Seguridad
+      </button>
+    </nav>
+  </div>
+
+  <!-- Tab content -->
+  @if (user(); as u) {
+    @if (selectedTab() === 'info') {
+      <section data-testid="tab-info" class="space-y-6">
+        <dl class="grid grid-cols-1 gap-x-6 gap-y-3 rounded-md border border-outline-variant bg-surface-container-lowest p-6 md:grid-cols-2">
+          <div class="space-y-1">
+            <dt class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">Usuario</dt>
+            <dd class="text-sm text-on-surface">{{ u.username }}</dd>
+          </div>
+          <div class="space-y-1">
+            <dt class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">Email</dt>
+            <dd class="text-sm text-on-surface">{{ u.email }}</dd>
+          </div>
+          <div class="space-y-1">
+            <dt class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">Nombre</dt>
+            <dd class="text-sm text-on-surface">{{ u.firstName ?? '—' }}</dd>
+          </div>
+          <div class="space-y-1">
+            <dt class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">Apellido</dt>
+            <dd class="text-sm text-on-surface">{{ u.lastName ?? '—' }}</dd>
+          </div>
+          <div class="space-y-1">
+            <dt class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">Último acceso</dt>
+            <dd class="text-sm text-on-surface">{{ formatDateTime(u.lastLoginAt) }}</dd>
+          </div>
+          <div class="space-y-1">
+            <dt class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">Intentos fallidos</dt>
+            <dd class="text-sm text-on-surface">{{ u.failedLoginAttempts }}</dd>
+          </div>
+          <div class="space-y-1">
+            <dt class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">Bloqueado hasta</dt>
+            <dd class="text-sm text-on-surface">{{ formatDateTime(u.lockedUntil) }}</dd>
+          </div>
+          <div class="space-y-1">
+            <dt class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">Creado</dt>
+            <dd class="text-sm text-on-surface">{{ formatDate(u.createdAt) }}</dd>
+          </div>
+          <div class="space-y-1">
+            <dt class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">Actualizado</dt>
+            <dd class="text-sm text-on-surface">{{ formatDateTime(u.updatedAt) }}</dd>
+          </div>
+        </dl>
+
+        <div class="flex justify-end">
+          <button
+            type="button"
+            (click)="editInfo()"
+            [disabled]="!canEditInfo()"
+            data-testid="edit-info-button"
+            [title]="isFirstAdmin() ? 'El primer administrador no puede ser editado' : isSelf() ? 'No podés editar tu propio usuario' : ''"
+            class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-on-primary hover:bg-primary-fixed-dim focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Editar información
+          </button>
+        </div>
+      </section>
+    }
+
+    @if (selectedTab() === 'roles') {
+      <section data-testid="tab-roles" class="space-y-6">
+        <ul class="space-y-3 rounded-md border border-outline-variant bg-surface-container-lowest p-6">
+          @for (role of u.roles; track role.id) {
+            <li class="flex items-start gap-3" data-testid="role-item">
+              <app-role-chip [role]="role" />
+              <span class="text-sm text-on-surface-variant">{{ role.description ?? 'Sin descripción disponible.' }}</span>
+            </li>
+          } @empty {
+            <li class="text-sm text-on-surface-variant">Este usuario no tiene roles asignados.</li>
+          }
+        </ul>
+
+        <div class="flex justify-end">
+          <button
+            type="button"
+            disabled
+            data-testid="edit-roles-button"
+            class="inline-flex h-10 items-center justify-center rounded-md border border-outline-variant bg-surface-container-lowest px-4 text-sm font-semibold text-on-surface-variant opacity-60 cursor-not-allowed"
+            title="Próximamente: gestión de roles dedicada."
+          >
+            Editar roles
+          </button>
+        </div>
+      </section>
+    }
+
+    @if (selectedTab() === 'security') {
+      <section data-testid="tab-security" class="space-y-6">
+        <div class="rounded-md border border-outline-variant bg-surface-container-lowest p-6">
+          <h2 class="text-base font-semibold text-on-surface">Contraseña</h2>
+          <p class="mt-1 text-sm text-on-surface-variant">
+            Generá una contraseña temporal. El usuario deberá cambiarla en su próximo inicio de sesión.
+          </p>
+          <button
+            type="button"
+            (click)="resetPassword()"
+            [disabled]="!canResetPassword()"
+            data-testid="reset-password-button"
+            class="mt-4 inline-flex h-10 items-center justify-center rounded-md border border-outline-variant bg-surface-container-lowest px-4 text-sm font-semibold text-on-surface hover:bg-surface-container-low focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Resetear contraseña
+          </button>
+        </div>
+
+        <div class="rounded-md border border-outline-variant bg-surface-container-lowest p-6">
+          <h2 class="text-base font-semibold text-on-surface">Estado de la cuenta</h2>
+          <p class="mt-1 text-sm text-on-surface-variant">
+            @if (u.status === 'ACTIVE') {
+              El usuario está activo y puede iniciar sesión.
+            } @else {
+              El usuario está deshabilitado y no puede iniciar sesión.
+            }
+          </p>
+          @if (u.status === 'ACTIVE') {
+            <button
+              type="button"
+              (click)="showDisableConfirm.set(true)"
+              [disabled]="!canDisable()"
+              data-testid="disable-user-button"
+              [title]="isFirstAdmin() ? 'El primer administrador no puede ser desactivado' : isSelf() ? 'No podés desactivarte a vos mismo' : ''"
+              class="mt-4 inline-flex h-10 items-center justify-center rounded-md bg-error px-4 text-sm font-semibold text-on-error hover:bg-error/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Desactivar usuario
+            </button>
+          } @else {
+            <button
+              type="button"
+              (click)="showReactivateConfirm.set(true)"
+              [disabled]="!canReactivate()"
+              data-testid="reactivate-user-button"
+              [title]="isFirstAdmin() ? 'El primer administrador no puede ser reactivado' : isSelf() ? 'No podés reactivarte a vos mismo' : ''"
+              class="mt-4 inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-on-primary hover:bg-primary-fixed-dim focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Reactivar usuario
+            </button>
+          }
+        </div>
+      </section>
+    }
+  }
+
+  <!-- Loading state -->
+  @if (isLoading()) {
+    <p class="text-sm text-on-surface-variant" data-testid="loading">Cargando...</p>
+  }
+
+  <!-- Error state -->
+  @if (errorMessage(); as msg) {
+    <p class="text-sm text-error" data-testid="error" role="alert">{{ msg }}</p>
+  }
+
+  <!-- Password reveal modal -->
+  @if (showPasswordModal() && passwordModalData(); as data) {
+    <app-password-reveal-modal
+      [temporaryPassword]="data.temporaryPassword"
+      [warning]="data.warning"
+      [username]="data.username"
+      (dismiss)="onPasswordModalDismiss()"
+      (createAnother)="onPasswordModalCreateAnother()"
+    />
+  }
+
+  <!-- Disable confirm -->
+  @if (showDisableConfirm() && user(); as u) {
+    <app-confirm-dialog
+      title="Desactivar usuario"
+      [message]="'¿Desactivar a ' + u.username + '? No podrá iniciar sesión hasta que lo reactives.'"
+      confirmLabel="Desactivar"
+      cancelLabel="Cancelar"
+      [destructive]="true"
+      (confirm)="disable()"
+      (cancel)="showDisableConfirm.set(false)"
+    />
+  }
+
+  <!-- Reactivate confirm -->
+  @if (showReactivateConfirm() && user(); as u) {
+    <app-confirm-dialog
+      title="Reactivar usuario"
+      [message]="'¿Reactivar a ' + u.username + '? Volverá a poder iniciar sesión.'"
+      confirmLabel="Reactivar"
+      cancelLabel="Cancelar"
+      [destructive]="false"
+      (confirm)="reactivate()"
+      (cancel)="showReactivateConfirm.set(false)"
+    />
+  }
+</section>
