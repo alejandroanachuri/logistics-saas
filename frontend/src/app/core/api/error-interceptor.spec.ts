@@ -212,4 +212,59 @@ describe('errorInterceptor', () => {
       }
     });
   });
+
+  /**
+   * etapa-2-usuarios PR-4: the backend's company-user admin
+   * endpoints emit 8 new error codes. The interceptor must
+   * surface canonical Spanish copy for each so the team
+   * pages can render the message in a live region without
+   * translating the envelope code by hand.
+   */
+  describe('etapa-2 company-user error codes', () => {
+    type Case = readonly [string, string];
+
+    /**
+     * Each row: [code, expected Spanish copy]. The codes and
+     * copy are defined by the backend's GlobalExceptionHandler
+     * (PR-3 commit 37d3abd). Kept as a table here so adding a
+     * new code is a one-line table extension + matching entry
+     * in error-interceptor.ts.
+     */
+    const cases: readonly Case[] = [
+      ['USER_NOT_FOUND', 'No encontramos a ese usuario'],
+      ['INVALID_ROLE', 'Uno o más roles no son válidos'],
+      ['USER_ALREADY_DISABLED', 'Este usuario ya está deshabilitado'],
+      ['USER_ALREADY_ACTIVE', 'Este usuario ya está activo'],
+      ['SELF_EDIT_BLOCKED', 'No podés editarte a vos mismo desde acá'],
+      ['SELF_DISABLE_BLOCKED', 'No podés deshabilitar tu propio usuario'],
+      ['FIRST_ADMIN_PROTECTED', 'El primer administrador está protegido'],
+      ['LAST_ADMIN_PROTECTED', 'La empresa debe tener al menos un administrador activo'],
+    ];
+
+    it.each(cases)(
+      'maps %s to canonical Spanish copy: %s',
+      async (code, expectedCopy) => {
+        const err = new HttpErrorResponse({
+          status: 400,
+          statusText: 'Bad Request',
+          error: { error: { code, message: 'raw backend message' } },
+        });
+        const { handler } = makeHandler(err);
+        const req = new HttpRequest('POST', '/api/v1/company-users', {});
+
+        const thrown = await new Promise<HttpErrorResponse>((resolve) => {
+          TestBed.configureTestingModule({ providers: [AuthStore] });
+          TestBed.runInInjectionContext(() => {
+            errorInterceptor(req, handler).subscribe({
+              error: (e) => resolve(e as HttpErrorResponse),
+            });
+          });
+        });
+
+        const env = (thrown.error as { error: { code: string; message: string } }).error;
+        expect(env.code).toBe(code);
+        expect(env.message).toBe(expectedCopy);
+      },
+    );
+  });
 });

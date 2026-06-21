@@ -47,6 +47,17 @@ const CODE_TO_COPY: Record<string, string> = {
   RATE_LIMIT_EXCEEDED: 'Hiciste demasiados intentos. Esperá un momento.',
   FORBIDDEN_SCOPE: 'No tenés permisos para esta acción',
   NETWORK_ERROR: 'No pudimos conectarnos. Reintentá',
+  // etapa-2-usuarios PR-4 — company-user admin error codes
+  // (added in PR-3 backend, surfaced by the interceptor so the
+  // team pages can show canonical Spanish copy on failure).
+  USER_NOT_FOUND: 'No encontramos a ese usuario',
+  INVALID_ROLE: 'Uno o más roles no son válidos',
+  USER_ALREADY_DISABLED: 'Este usuario ya está deshabilitado',
+  USER_ALREADY_ACTIVE: 'Este usuario ya está activo',
+  SELF_EDIT_BLOCKED: 'No podés editarte a vos mismo desde acá',
+  SELF_DISABLE_BLOCKED: 'No podés deshabilitar tu propio usuario',
+  FIRST_ADMIN_PROTECTED: 'El primer administrador está protegido',
+  LAST_ADMIN_PROTECTED: 'La empresa debe tener al menos un administrador activo',
 };
 
 const NETWORK_ERROR = {
@@ -150,8 +161,18 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
       const envelope = parseEnvelope(err.error);
       const code = envelope?.error.code;
       const message = envelope?.error.message ?? err.statusText;
-      const details = envelope?.error.details;
       const localized = (code && CODE_TO_COPY[code]) ?? message;
+
+      // 2a) Build the projected envelope. When the backend's
+      //     code is one we have canonical Spanish copy for,
+      //     translate the message; otherwise pass the
+      //     envelope through verbatim (with details preserved).
+      const projectedEnvelope: ApiErrorEnvelope =
+        envelope
+          ? code && CODE_TO_COPY[code]
+            ? { error: { code, message: localized, details: envelope.error.details } }
+            : envelope
+          : { error: { code: 'UNKNOWN', message: localized } };
 
       // 3) Forced-logout path: a 401 on a refreshable endpoint
       //    when the refresh itself 401s. We detect this case
@@ -159,12 +180,7 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
       //    here, because at this layer we only see the
       //    original 401.
       if (err.status !== 401 || shouldNotRetry(req.url)) {
-        return throwError(() =>
-          projectApiHttpError(
-            err,
-            envelope ?? { error: { code: 'UNKNOWN', message: localized } },
-          ),
-        );
+        return throwError(() => projectApiHttpError(err, projectedEnvelope));
       }
 
       // 4) 401 on a refreshable endpoint: try exactly one
