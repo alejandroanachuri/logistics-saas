@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter, map, startWith } from 'rxjs/operators';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 import { AuthService } from '../../core/services/auth.service';
 import { AuthStore } from '../../core/state/auth-store';
@@ -12,6 +14,33 @@ interface NavItem {
   readonly route: string;
   readonly disabled?: boolean;
   readonly disabledHint?: string;
+  /**
+   * Optional visibility gate. When set, the item only renders
+   * if `visible()` returns true. Used for the role-gated
+   * "Equipo" item added in etapa-2-usuarios PR-5 — the gate
+   * reads `AuthStore.currentUserIsAdmin()` so non-admins
+   * never see the link.
+   */
+  readonly visible?: () => boolean;
+}
+
+/**
+ * Map a current route URL to the header title. Centralized so
+ * the 4 team pages + the dashboard home + any future feature
+ * pages share a single source of truth.
+ *
+ * Longest paths win (`/team/new` matches before `/team`),
+ * so the prefix-first scan below resolves correctly.
+ */
+function titleForUrl(url: string): string {
+  // Strip query string + hash + trailing slash for matching.
+  const path = url.split('?')[0].split('#')[0].replace(/\/+$/, '') || '/';
+  if (path.startsWith('/team/new')) return 'Nuevo usuario';
+  if (path.startsWith('/team/') && path.endsWith('/edit')) return 'Editar usuario';
+  if (path.match(/^\/team\/[^/]+$/)) return 'Detalle del usuario';
+  if (path === '/team' || path.startsWith('/team')) return 'Equipo';
+  if (path === '/dashboard' || path === '/dashboard/') return 'Dashboard';
+  return 'Dashboard';
 }
 
 /**
@@ -31,6 +60,12 @@ interface NavItem {
  * Configuración). The placeholders are rendered as
  * disabled buttons with a 'Próximamente' tooltip so the
  * user can see what is coming without expecting it to work.
+ *
+ * <p>Since etapa-2-usuarios PR-5 the sidebar also exposes an
+ * "Equipo" item, gated by
+ * `AuthStore.currentUserIsAdmin()` — only COMPANY_ADMIN
+ * users see the link. Non-admins are also blocked at the
+ * route level by `teamAccessGuard` (defense in depth).
  *
  * <p>When the sidebar item is the current route, the item
  * is highlighted via the {@code routerLinkActive} directive
@@ -56,27 +91,54 @@ export class DashboardShellComponent {
   private readonly router = inject(Router);
 
   /**
-   * Sidebar nav items. The first entry is the active
-   * dashboard home; the rest are upcoming features marked
-   * as disabled in v1. The 'route' field is what the
-   * routerLink would point to; disabled items ignore the
-   * click and surface a 'Próximamente' tooltip instead.
+   * Reactive signal of the current router URL, kept in sync
+   * with NavigationEnd events. Drives `pageTitle()` so the
+   * header reflects the active feature page (Dashboard,
+   * Equipo, Nuevo usuario, etc.).
    */
-  protected readonly navItems = signal<readonly NavItem[]>([
-    { label: 'Dashboard', icon: '◉', route: '/dashboard' },
-    { label: 'Envíos', icon: '➤', route: '/shipments', disabled: true, disabledHint: 'Próximamente' },
-    { label: 'Clientes', icon: '◐', route: '/customers', disabled: true, disabledHint: 'Próximamente' },
-    { label: 'Reportes', icon: '◈', route: '/reports', disabled: true, disabledHint: 'Próximamente' },
-    { label: 'Configuración', icon: '⚙', route: '/settings', disabled: true, disabledHint: 'Próximamente' },
-  ]);
+  private readonly currentUrl = toSignal(
+    this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+      map((e) => e.urlAfterRedirects),
+      startWith(this.router.url),
+    ),
+    { initialValue: this.router.url },
+  );
 
   /**
-   * Header title driven by the current route. For v1 the
-   * dashboard is the only authenticated route, so the title
-   * is hard-coded to 'Dashboard'. When more feature pages
-   * land, this becomes a route-data-driven lookup.
+   * Sidebar nav items. The first entry is the active
+   * dashboard home; the rest are upcoming features marked
+   * as disabled in v1, plus the role-gated "Equipo" item
+   * (PR-5) which only renders when
+   * `AuthStore.currentUserIsAdmin()` is true.
    */
-  protected readonly pageTitle = computed(() => 'Dashboard');
+  protected readonly navItems = computed<readonly NavItem[]>(() => {
+    const baseItems: NavItem[] = [
+      { label: 'Dashboard', icon: '◉', route: '/dashboard' },
+      { label: 'Envíos', icon: '➤', route: '/shipments', disabled: true, disabledHint: 'Próximamente' },
+      { label: 'Clientes', icon: '◐', route: '/customers', disabled: true, disabledHint: 'Próximamente' },
+      { label: 'Reportes', icon: '◈', route: '/reports', disabled: true, disabledHint: 'Próximamente' },
+      { label: 'Configuración', icon: '⚙', route: '/settings', disabled: true, disabledHint: 'Próximamente' },
+    ];
+    // Insert the Equipo item right after Dashboard when the
+    // user has COMPANY_ADMIN — it's the most-used admin
+    // surface, so it deserves prominence over the
+    // disabled placeholders.
+    if (this.authStore.currentUserIsAdmin()) {
+      baseItems.splice(1, 0, {
+        label: 'Equipo',
+        icon: '👥',
+        route: '/team',
+      });
+    }
+    return baseItems;
+  });
+
+  /**
+   * Header title driven by the current route. Reads the
+   * `currentUrl` signal and maps it via `titleForUrl`.
+   */
+  protected readonly pageTitle = computed(() => titleForUrl(this.currentUrl()));
 
   /**
    * Brand + version for the footer.
