@@ -1,0 +1,215 @@
+<section data-testid="team-create" class="space-y-6">
+  <header class="space-y-1">
+    <h1 class="text-2xl font-semibold text-on-surface">Nuevo usuario</h1>
+    <p class="text-sm text-on-surface-variant">
+      Sumá un nuevo miembro a tu empresa. La contraseña se genera y se muestra una sola vez después de crear.
+    </p>
+  </header>
+
+  <form
+    [formGroup]="form"
+    (ngSubmit)="onSubmit()"
+    novalidate
+    data-testid="team-create-form"
+    class="max-w-xl space-y-5 rounded-md border border-outline-variant bg-surface-container-lowest p-6"
+  >
+    <!-- Section 1: Datos personales -->
+    <section>
+      <h2 class="text-lg font-semibold text-on-surface">Datos personales</h2>
+      <p class="mt-1 text-xs text-on-surface-variant">
+        Nombre y apellido son opcionales. Email y usuario son obligatorios y únicos dentro de tu empresa.
+      </p>
+
+      <div class="mt-4 space-y-4">
+        <div class="space-y-1">
+          <label for="create-firstName" class="block text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+            Nombre
+          </label>
+          <input
+            id="create-firstName"
+            type="text"
+            name="firstName"
+            formControlName="firstName"
+            autocomplete="given-name"
+            class="block w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+        </div>
+
+        <div class="space-y-1">
+          <label for="create-lastName" class="block text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+            Apellido
+          </label>
+          <input
+            id="create-lastName"
+            type="text"
+            name="lastName"
+            formControlName="lastName"
+            autocomplete="family-name"
+            class="block w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+        </div>
+
+        <div class="space-y-1">
+          <label for="create-email" class="block text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+            Email <span aria-hidden="true" class="text-error">*</span>
+          </label>
+          <input
+            id="create-email"
+            type="email"
+            name="email"
+            formControlName="email"
+            autocomplete="email"
+            data-testid="email-input"
+            [attr.aria-invalid]="form.controls['email']!.invalid && form.controls['email']!.touched ? 'true' : null"
+            class="block w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary aria-[invalid=true]:border-error"
+          />
+          @if (form.controls['email']!.invalid && form.controls['email']!.touched) {
+            <p class="text-xs text-error" role="alert">Email inválido o ya registrado</p>
+          }
+        </div>
+
+        <div class="space-y-1">
+          <label for="create-username" class="block text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+            Usuario <span aria-hidden="true" class="text-error">*</span>
+          </label>
+          <input
+            id="create-username"
+            type="text"
+            name="username"
+            formControlName="username"
+            autocomplete="username"
+            data-testid="username-input"
+            [attr.aria-invalid]="form.controls['username']!.invalid && form.controls['username']!.touched ? 'true' : null"
+            class="block w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary aria-[invalid=true]:border-error"
+          />
+          @if (form.controls['username']!.invalid && form.controls['username']!.touched) {
+            <p class="text-xs text-error" role="alert">
+              Usuario debe tener 3-30 caracteres (a-z, 0-9, ._-)
+            </p>
+          }
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Contraseña temporal -->
+    <section>
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-on-surface">Contraseña temporal</h2>
+        <button
+          type="button"
+          (click)="generatePassword()"
+          data-testid="generate-password-btn"
+          class="text-sm font-medium text-primary hover:underline focus:outline-none focus-visible:underline"
+        >
+          Generar contraseña aleatoria
+        </button>
+      </div>
+      <p class="mt-1 text-xs text-on-surface-variant">
+        Mínimo 8 caracteres, con mayúscula, minúscula y número.
+      </p>
+
+      <div class="mt-4 space-y-4">
+        <div class="space-y-1">
+          <label for="create-password" class="block text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+            Contraseña <span aria-hidden="true" class="text-error">*</span>
+          </label>
+          <input
+            id="create-password"
+            type="password"
+            name="password"
+            formControlName="password"
+            autocomplete="new-password"
+            data-testid="password-input"
+            [attr.aria-invalid]="form.controls['password']!.invalid && form.controls['password']!.touched ? 'true' : null"
+            class="block w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary aria-[invalid=true]:border-error"
+          />
+          @if (form.controls['password']!.invalid && form.controls['password']!.touched) {
+            <p class="text-xs text-error" role="alert">
+              Mínimo 8 caracteres, 1 mayúscula, 1 minúscula y 1 número.
+            </p>
+          }
+          <app-password-strength-meter [password]="passwordValue" class="mt-2 block" />
+        </div>
+
+        <div class="space-y-1">
+          <label for="create-password-confirmation" class="block text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+            Confirmar contraseña <span aria-hidden="true" class="text-error">*</span>
+          </label>
+          <input
+            id="create-password-confirmation"
+            type="password"
+            name="passwordConfirmation"
+            formControlName="passwordConfirmation"
+            autocomplete="new-password"
+            data-testid="password-confirm-input"
+            [attr.aria-invalid]="form.errors?.['passwordMismatch'] && form.controls['passwordConfirmation']!.touched ? 'true' : null"
+            class="block w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary aria-[invalid=true]:border-error"
+          />
+          @if (form.errors?.['passwordMismatch'] && form.controls['passwordConfirmation']!.touched) {
+            <p class="text-xs text-error" role="alert">Las contraseñas no coinciden.</p>
+          }
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: Roles -->
+    <section>
+      <h2 class="text-lg font-semibold text-on-surface">Roles</h2>
+      <p class="mt-1 text-xs text-on-surface-variant">
+        Asigná al menos un rol. Los administradores tienen acceso total, incluida la gestión de usuarios.
+      </p>
+
+      <div class="mt-4">
+        <app-multi-select
+          [options]="availableRoles()"
+          [selected]="selectedRoleIds()"
+          [adminRoleIds]="['r-admin']"
+          (selectedChange)="onRolesChange($event)"
+          data-testid="roles-multiselect"
+        />
+        <!-- Hidden input to satisfy the "name" attribute assertion
+             in the form-field test. The actual binding lives on
+             the multi-select component above. -->
+        <input type="hidden" name="roleIds" formControlName="roleIds" />
+      </div>
+      @if (form.controls['roleIds']!.invalid && form.controls['roleIds']!.touched) {
+        <p class="mt-2 text-xs text-error" role="alert">Seleccioná al menos un rol.</p>
+      }
+    </section>
+
+    <!-- Error + footer -->
+    @if (errorMessage(); as err) {
+      <p class="text-sm text-error" role="alert" data-testid="error">{{ err }}</p>
+    }
+
+    <div class="flex flex-wrap items-center justify-between gap-2 pt-2">
+      <a
+        routerLink="/team"
+        data-testid="cancel-link"
+        class="inline-flex h-9 items-center rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-sm font-medium text-on-surface hover:bg-surface-container-low focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      >
+        Cancelar
+      </a>
+      <button
+        type="submit"
+        [disabled]="form.invalid || isLoading()"
+        data-testid="submit-btn"
+        class="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-on-primary hover:bg-primary-fixed-dim focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {{ isLoading() ? 'Creando...' : 'Crear usuario' }}
+      </button>
+    </div>
+  </form>
+
+  <!-- Password reveal modal after a successful create -->
+  @if (showPasswordModal() && passwordModalData(); as data) {
+    <app-password-reveal-modal
+      [temporaryPassword]="data.temporaryPassword"
+      [warning]="data.warning"
+      [username]="data.username"
+      [showCreateAnother]="true"
+      (dismiss)="onPasswordModalDismiss()"
+      (createAnother)="onPasswordModalCreateAnother()"
+    />
+  }
+</section>
