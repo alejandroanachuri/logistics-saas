@@ -1,0 +1,95 @@
+<section data-testid="team-edit" class="space-y-6">
+  <header class="space-y-1">
+    <h1 class="text-2xl font-semibold text-on-surface">Editar usuario</h1>
+    <p class="text-sm text-on-surface-variant">
+      Modificá la información personal del usuario. Los cambios se aplican al guardar.
+    </p>
+  </header>
+
+  <form
+    [formGroup]="form"
+    (ngSubmit)="onSubmit()"
+    novalidate
+    class="max-w-xl space-y-5 rounded-md border border-outline-variant bg-surface-container-lowest p-6"
+  >
+    <div class="space-y-1">
+      <label for="edit-firstName" class="block text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+        Nombre
+      </label>
+      <input
+        id="edit-firstName"
+        type="text"
+        formControlName="firstName"
+        autocomplete="given-name"
+        [attr.aria-invalid]="shouldShowError('firstName') ? 'true' : null"
+        aria-describedby="edit-firstName-error"
+        class="block w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary aria-[invalid=true]:border-error"
+      />
+      @if (errorMessageFor('firstName'); as msg) {
+        <p id="edit-firstName-error" class="text-xs text-error" role="status">{{ msg }}</p>
+      }
+    </div>
+
+    <div class="space-y-1">
+      <label for="edit-lastName" class="block text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+        Apellido
+      </label>
+      <input
+        id="edit-lastName"
+        type="text"
+        formControlName="lastName"
+        autocomplete="family-name"
+        [attr.aria-invalid]="shouldShowError('lastName') ? 'true' : null"
+        aria-describedby="edit-lastName-error"
+        class="block w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary aria-[invalid=true]:border-error"
+      />
+      @if (errorMessageFor('lastName'); as msg) {
+        <p id="edit-lastName-error" class="text-xs text-error" role="status">{{ msg }}</p>
+      }
+    </div>
+
+    <div class="space-y-1">
+      <label for="edit-email" class="block text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+        Email
+      </label>
+      <input
+        id="edit-email"
+        type="email"
+        formControlName="email"
+        autocomplete="email"
+        [disabled]="emailDisabled()"
+        [attr.aria-invalid]="shouldShowError('email') ? 'true' : null"
+        aria-describedby="edit-email-help edit-email-error"
+        class="block w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60 aria-[invalid=true]:border-error"
+      />
+      <p id="edit-email-help" class="text-xs text-on-surface-variant">
+        @if (emailDisabled()) {
+          El email del primer administrador no se puede modificar.
+        } @else {
+          El email debe ser único dentro de tu empresa.
+        }
+      </p>
+      @if (errorMessageFor('email'); as msg) {
+        <p id="edit-email-error" class="text-xs text-error" role="status">{{ msg }}</p>
+      }
+    </div>
+
+    <div class="flex flex-wrap items-center justify-end gap-2 pt-2">
+      <a
+        [routerLink]="['/team', targetUserId()]"
+        class="inline-flex h-9 items-center rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-sm font-medium text-on-surface hover:bg-surface-container-low"
+        data-testid="cancel-link"
+      >
+        Cancelar
+      </a>
+      <app-button
+        variant="primary"
+        type="submit"
+        [disabled]="form.invalid"
+        data-testid="save-button"
+      >
+        Guardar cambios
+      </app-button>
+    </div>
+  </form>
+</section>
