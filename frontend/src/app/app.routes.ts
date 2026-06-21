@@ -83,6 +83,21 @@ export const routes: Routes = [
             loadComponent: () =>
               import('./features/team/list/team-list').then((m) => m.TeamListComponent),
           },
+          {
+            path: 'new',
+            loadComponent: () =>
+              import('./features/team/create/team-create').then((m) => m.TeamCreateComponent),
+          },
+          {
+            path: ':id',
+            loadComponent: () =>
+              import('./features/team/detail/team-detail').then((m) => m.TeamDetailComponent),
+          },
+          {
+            path: ':id/edit',
+            loadComponent: () =>
+              import('./features/team/edit/team-edit').then((m) => m.TeamEditComponent),
+          },
         ],
       },
     ],
