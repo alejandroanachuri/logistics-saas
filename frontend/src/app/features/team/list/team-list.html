@@ -1,0 +1,168 @@
+<section data-testid="team-list" class="space-y-6">
+  <!-- Header: H1 + primary CTA (admin-only) -->
+  <header class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold text-on-surface">Equipo</h1>
+      <p class="mt-1 text-sm text-on-surface-variant">
+        Gestioná los usuarios de tu empresa. Solo las personas con rol de
+        administrador pueden ver y editar esta sección.
+      </p>
+    </div>
+    @if (authStore.currentUserIsAdmin()) {
+      <a
+        routerLink="/team/new"
+        data-testid="new-user-cta"
+        class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-on-primary hover:bg-primary-fixed-dim focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+      >
+        + Nuevo usuario
+      </a>
+    }
+  </header>
+
+  <!-- Filter bar: search + status + role -->
+  <div
+    class="grid grid-cols-1 gap-3 rounded-md border border-outline-variant bg-surface-container-lowest p-4 md:grid-cols-3"
+    aria-label="Filtros"
+  >
+    <div class="space-y-1">
+      <label for="team-search" class="block text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+        Buscar
+      </label>
+      <input
+        id="team-search"
+        type="search"
+        [value]="searchTerm()"
+        (input)="onSearchChange($any($event.target).value)"
+        placeholder="Usuario, email o nombre"
+        class="block w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+      />
+    </div>
+    <div class="space-y-1">
+      <label for="team-status" class="block text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+        Estado
+      </label>
+      <select
+        id="team-status"
+        [value]="statusFilter()"
+        (change)="onStatusChange($any($event.target).value)"
+        class="block w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+      >
+        <option value="ALL">Todos</option>
+        <option value="ACTIVE">Activos</option>
+        <option value="DISABLED">Deshabilitados</option>
+      </select>
+    </div>
+    <div class="space-y-1">
+      <label for="team-role" class="block text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+        Rol
+      </label>
+      <select
+        id="team-role"
+        [value]="roleFilter()"
+        (change)="onRoleChange($any($event.target).value)"
+        class="block w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+      >
+        <option value="ALL">Todos</option>
+        @for (role of roles(); track role.id) {
+          <option [value]="role.id">{{ role.name }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  <!-- Empty state -->
+  @if (showEmptyState()) {
+    <app-empty-state
+      icon="👥"
+      title="Todavía no tenés usuarios"
+      message="Todavía no tenés más usuarios en tu equipo. Sumá el primero para empezar."
+      ctaLabel="+ Nuevo usuario"
+      (ctaClick)="onFilterChange()"
+    />
+  }
+
+  <!-- Data table -->
+  @if (showTable()) {
+    <div class="rounded-md border border-outline-variant bg-surface-container-lowest p-4">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="text-on-surface-variant">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Nombre</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Usuario</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Email</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Roles</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Estado</th>
+              <th class="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide md:table-cell">Último acceso</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rows(); track row.id) {
+              <tr data-row class="border-t border-outline-variant">
+                <td class="px-4 py-3 text-on-surface">
+                  <a [routerLink]="['/team', row.id]" class="font-medium hover:underline">{{ row.firstName ?? row.username }}</a>
+                </td>
+                <td class="px-4 py-3 text-on-surface">{{ row.username }}</td>
+                <td class="px-4 py-3 text-on-surface-variant">{{ row.email }}</td>
+                <td class="px-4 py-3">
+                  <div class="flex flex-wrap gap-1">
+                    @for (r of row.roles; track r.id) {
+                      <app-role-chip [role]="r" size="sm" />
+                    }
+                  </div>
+                </td>
+                <td class="px-4 py-3">
+                  <app-status-badge [status]="row.status" />
+                </td>
+                <td class="hidden px-4 py-3 text-on-surface-variant md:table-cell">
+                  {{ row.lastLoginAt ? (row.lastLoginAt | date: 'dd/MM/yyyy') : '—' }}
+                </td>
+                <td class="px-4 py-3 text-right">
+                  <a
+                    [routerLink]="['/team', row.id]"
+                    class="inline-flex h-8 items-center rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-sm font-medium text-on-surface hover:bg-surface-container-low"
+                  >
+                    Ver detalle
+                  </a>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Pagination footer -->
+    <nav class="flex flex-wrap items-center justify-between gap-2" aria-label="Paginación">
+      <p class="text-sm text-on-surface-variant" data-pagination-summary>
+        Página {{ pagination().page }} · {{ pagination().total }} resultados
+      </p>
+      <div class="flex gap-2">
+        <button
+          type="button"
+          data-page-prev
+          [disabled]="pagination().page <= 1"
+          (click)="onPage({ page: pagination().page - 1, size: pagination().size })"
+          class="inline-flex h-9 items-center rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-sm font-medium text-on-surface hover:bg-surface-container-low disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Anterior
+        </button>
+        <button
+          type="button"
+          data-page-next
+          [disabled]="pagination().page * pagination().size >= pagination().total"
+          (click)="onPage({ page: pagination().page + 1, size: pagination().size })"
+          class="inline-flex h-9 items-center rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-sm font-medium text-on-surface hover:bg-surface-container-low disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Siguiente
+        </button>
+      </div>
+    </nav>
+  }
+
+  <!-- Loading state -->
+  @if (store.isLoading()) {
+    <p class="text-sm text-on-surface-variant" data-testid="loading">Cargando...</p>
+  }
+</section>
