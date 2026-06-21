@@ -40,6 +40,7 @@ describe('authGuard', () => {
       firstName: 'Juan',
       lastName: '',
       role: 'COMPANY_ADMIN',
+      roles: ['COMPANY_ADMIN'],
       scope: 'COMPANY',
       emailVerified: false,
     });

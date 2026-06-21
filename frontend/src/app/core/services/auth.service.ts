@@ -23,6 +23,15 @@ import {
  * here (and in the {@code errorInterceptor}'s forced-logout
  * branch). Components read the stores but never write them
  * directly.
+ *
+ * <p>Since {@code etapa-2-usuarios} (PR-3 backend, PR-4
+ * frontend) the wire responses carry {@code roles: string[]}
+ * instead of {@code role: string}. The service populates both
+ * {@code user.roles} (the canonical field) and
+ * {@code user.role} (deprecated backwards-compat — derived as
+ * {@code roles[0] ?? ''}) so single-role consumers like the
+ * dashboard info card keep working without an immediate
+ * refactor.
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -37,8 +46,9 @@ export class AuthService {
   login(creds: LoginRequest): Observable<LoginResponse> {
     return this.http.post<LoginResponse>('/api/v1/auth/login', creds).pipe(
       tap((resp) => {
-        this.authStore.setUser(resp.user);
-        this.tenantStore.setTenant(this.tenantFromUser(resp.user));
+        const user = this.userFromLoginResponse(resp);
+        this.authStore.setUser(user);
+        this.tenantStore.setTenant(this.tenantFromUser(user));
       }),
     );
   }
@@ -109,6 +119,18 @@ export class AuthService {
   }
 
   /**
+   * Project a {@code LoginResponse.user} onto the canonical
+   * {@code AuthUser} shape. Since PR-3 the backend sends
+   * {@code roles: string[]} on login; the service hydrates
+   * both the new field and the backwards-compat
+   * {@code role} field so single-role consumers keep
+   * working.
+   */
+  private userFromLoginResponse(resp: LoginResponse): AuthUser {
+    return this.hydrateRoles(resp.user);
+  }
+
+  /**
    * Build the {@code AuthUser} projection the auth shell
    * reads from a {@code /me} response. The wire shape is a
    * subset of the full {@code AuthUser} (no {@code email},
@@ -118,7 +140,7 @@ export class AuthService {
    * for now).
    */
   private userFromMe(resp: MeResponse): AuthUser {
-    return {
+    const base: AuthUser = {
       id: resp.user.id,
       tenantId: resp.user.tenantId,
       tenantSlug: resp.user.tenantSlug,
@@ -126,9 +148,28 @@ export class AuthService {
       email: '',
       firstName: resp.user.username,
       lastName: '',
-      role: resp.user.role,
+      role: '',
+      roles: resp.user.roles ?? [],
       scope: resp.user.scope,
       emailVerified: true,
     };
+    return this.hydrateRoles(base);
+  }
+
+  /**
+   * Set {@code role} from {@code roles[0] ?? ''} so the
+   * deprecated singular field stays populated for
+   * backwards-compat. Tolerates a missing OR empty
+   * {@code roles} field on the wire (defensive — handles
+   * pre-PR-3 responses that only carry {@code role}, and
+   * handles any future shape drift).
+   */
+  private hydrateRoles(user: AuthUser): AuthUser {
+    const roles = user.roles && user.roles.length > 0
+      ? user.roles
+      : user.role
+        ? [user.role]
+        : [];
+    return { ...user, roles, role: roles[0] ?? '' };
   }
 }

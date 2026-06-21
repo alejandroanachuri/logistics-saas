@@ -1,5 +1,4 @@
 import { Injectable, computed, signal } from '@angular/core';
-import { inject, Injector, runInInjectionContext } from '@angular/core';
 import { AuthUser, Tenant } from '../types';
 
 /**
@@ -12,6 +11,13 @@ import { AuthUser, Tenant } from '../types';
  * {@code AuthService} (and from the {@code errorInterceptor}'s
  * forced-logout path). Components and the {@code authGuard}
  * read the {@code isAuthenticated} computed.
+ *
+ * Since {@code etapa-2-usuarios} the store exposes two
+ * multi-role-aware computed signals:
+ * - {@code currentUserRoles}: the full roles[] array
+ * - {@code currentUserIsAdmin}: true if the user has the
+ *   `COMPANY_ADMIN` role (drives {@code teamAccessGuard} and
+ *   the "Equipo" sidebar item in PR-5).
  */
 @Injectable({ providedIn: 'root' })
 export class AuthStore {
@@ -21,6 +27,26 @@ export class AuthStore {
   readonly currentUser = this._currentUser.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly isAuthenticated = computed(() => this._currentUser() !== null);
+
+  /**
+   * The full roles[] array from the backend (PR-3 contract).
+   * Empty when no user is signed in. Multi-role consumers
+   * (the team pages, the teamAccessGuard) read this rather
+   * than the singular `role` field.
+   */
+  readonly currentUserRoles = computed<string[]>(
+    () => this._currentUser()?.roles ?? [],
+  );
+
+  /**
+   * True when the signed-in user has the `COMPANY_ADMIN` role.
+   * Drives the "Equipo" sidebar item and the `teamAccessGuard`
+   * in PR-5. False for anonymous, COMPANY_OPERATOR,
+   * COMPANY_DRIVER, COMPANY_VIEWER, and PLATFORM-scope users.
+   */
+  readonly currentUserIsAdmin = computed<boolean>(
+    () => this._currentUser()?.roles.includes('COMPANY_ADMIN') ?? false,
+  );
 
   setUser(user: AuthUser): void {
     this._currentUser.set(user);

@@ -29,6 +29,7 @@ function makeUser(overrides: Partial<AuthUser> = {}): AuthUser {
     firstName: 'Juan',
     lastName: 'Perez',
     role: 'COMPANY_ADMIN',
+    roles: ['COMPANY_ADMIN'],
     scope: 'COMPANY',
     emailVerified: false,
     ...overrides,
@@ -46,7 +47,7 @@ function makeMeResponse(): MeResponse {
       tenantId: 'tenant-1',
       tenantSlug: 'mvr',
       username: 'juan',
-      role: 'COMPANY_ADMIN',
+      roles: ['COMPANY_ADMIN'],
       scope: 'COMPANY',
       expiresIn: 900,
     },
@@ -208,6 +209,97 @@ describe('AuthService', () => {
         id: me.user.tenantId,
         slug: me.user.tenantSlug,
       });
+    });
+
+    /**
+     * etapa-2-usuarios PR-4 regression: the backend's /me
+     * endpoint now returns `roles: string[]` (not `role: string`).
+     * The service must hydrate BOTH the new array AND the
+     * deprecated singular `role` field (derived as
+     * `roles[0]`) so single-role consumers like the dashboard
+     * info card keep working.
+     */
+    it('hydrates roles[] and derives role from roles[0] on /me (breaking change backwards-compat)', () => {
+      const me: MeResponse = {
+        user: {
+          id: 'user-1',
+          tenantId: 'tenant-1',
+          tenantSlug: 'mvr',
+          username: 'juan',
+          roles: ['COMPANY_ADMIN', 'COMPANY_VIEWER'],
+          scope: 'COMPANY',
+          expiresIn: 900,
+        },
+      };
+      httpMock.get.mockReturnValue(of(me));
+
+      service.me().subscribe();
+
+      const user = authStore.currentUser();
+      expect(user).toBeTruthy();
+      expect(user?.roles).toEqual(['COMPANY_ADMIN', 'COMPANY_VIEWER']);
+      expect(user?.role).toBe('COMPANY_ADMIN');
+      expect(authStore.currentUserRoles()).toEqual(['COMPANY_ADMIN', 'COMPANY_VIEWER']);
+      expect(authStore.currentUserIsAdmin()).toBe(true);
+    });
+
+    it('hydrates roles[] on login() (breaking change: wire shape uses roles not role)', () => {
+      const resp: LoginResponse = {
+        user: {
+          id: 'user-1',
+          tenantId: 'tenant-1',
+          tenantSlug: 'mvr',
+          username: 'juan',
+          email: 'juan@mvr.test',
+          firstName: 'Juan',
+          lastName: 'Perez',
+          role: 'COMPANY_OPERATOR',
+          roles: ['COMPANY_OPERATOR', 'COMPANY_DRIVER'],
+          scope: 'COMPANY',
+          emailVerified: true,
+        },
+        expiresIn: 900,
+      };
+      httpMock.post.mockReturnValue(of(resp));
+
+      service.login({ slug: 'mvr', username: 'juan', password: 'p' }).subscribe();
+
+      const user = authStore.currentUser();
+      expect(user).toBeTruthy();
+      expect(user?.roles).toEqual(['COMPANY_OPERATOR', 'COMPANY_DRIVER']);
+      // Deprecated field derives from roles[0] — single-role
+      // consumers keep working without a refactor.
+      expect(user?.role).toBe('COMPANY_OPERATOR');
+      expect(authStore.currentUserIsAdmin()).toBe(false);
+    });
+
+    it('derives role from roles[0] when the wire response only carries the legacy singular role field', () => {
+      // Defensive: handles pre-PR-3 backend responses (or any
+      // future shape drift) where only `role` is present.
+      const resp: LoginResponse = {
+        user: {
+          id: 'user-1',
+          tenantId: 'tenant-1',
+          tenantSlug: 'mvr',
+          username: 'juan',
+          email: 'juan@mvr.test',
+          firstName: 'Juan',
+          lastName: 'Perez',
+          role: 'COMPANY_ADMIN',
+          roles: [],
+          scope: 'COMPANY',
+          emailVerified: true,
+        },
+        expiresIn: 900,
+      };
+      httpMock.post.mockReturnValue(of(resp));
+
+      service.login({ slug: 'mvr', username: 'juan', password: 'p' }).subscribe();
+
+      const user = authStore.currentUser();
+      expect(user?.roles).toEqual(['COMPANY_ADMIN']);
+      expect(user?.role).toBe('COMPANY_ADMIN');
+      expect(authStore.currentUserIsAdmin()).toBe(true);
     });
   });
 

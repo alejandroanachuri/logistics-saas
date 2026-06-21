@@ -23,6 +23,7 @@ function makeLoginResponse(): LoginResponse {
       firstName: 'Juan',
       lastName: 'Perez',
       role: 'COMPANY_ADMIN',
+      roles: ['COMPANY_ADMIN'],
       scope: 'COMPANY',
       emailVerified: true,
     },
