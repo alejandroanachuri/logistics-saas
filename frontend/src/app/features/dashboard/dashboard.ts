@@ -7,7 +7,7 @@ import { CardComponent } from '../../shared/ui/card';
 /**
  * Dashboard home — the default authenticated page rendered
  * inside the {@code <router-outlet />} of the
- * {@code DashboardShellComponent}. Reads from
+ * {@code AuthLayoutComponent}. Reads from
  * {@code AuthStore} and {@code TenantStore} only — no
  * HTTP. The KPIs (Envíos hoy, Clientes activos, etc.) and
  * the recent-activity feed are v2; this v1 placeholder

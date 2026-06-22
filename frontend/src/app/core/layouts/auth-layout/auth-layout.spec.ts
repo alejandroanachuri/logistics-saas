@@ -3,11 +3,11 @@ import { Router, ActivatedRoute, NavigationEnd } from '@angular/router';
 import { Subject } from 'rxjs';
 import { vi } from 'vitest';
 
-import { DashboardShellComponent } from './dashboard-shell';
-import { AuthStore } from '../../core/state/auth-store';
-import { TenantStore } from '../../core/state/tenant-store';
-import { AuthService } from '../../core/services/auth.service';
-import { AuthUser } from '../../core/types';
+import { AuthLayoutComponent } from './auth-layout';
+import { AuthStore } from '../../../core/state/auth-store';
+import { TenantStore } from '../../../core/state/tenant-store';
+import { AuthService } from '../../../core/services/auth.service';
+import { AuthUser } from '../../../core/types';
 
 /**
  * Build an AuthUser fixture for the auth store. Mirrors the
@@ -32,14 +32,14 @@ function userWithRoles(roles: string[]): AuthUser {
 }
 
 /**
- * Render the dashboard shell with the auth store seeded with
+ * Render the auth layout with the auth store seeded with
  * the given roles, and emit a NavigationEnd on the router
  * events stream so the title computation runs as in real
  * navigation. Returns the fixture + helpers.
  */
 function render(roles: string[] | null, currentUrl: string): {
-  fixture: ComponentFixture<DashboardShellComponent>;
-  component: DashboardShellComponent;
+  fixture: ComponentFixture<AuthLayoutComponent>;
+  component: AuthLayoutComponent;
   navItems: () => readonly { label: string; route: string; disabled?: boolean; visible?: () => boolean }[];
   pageTitle: () => string;
 } {
@@ -52,7 +52,7 @@ function render(roles: string[] | null, currentUrl: string): {
   };
 
   TestBed.configureTestingModule({
-    imports: [DashboardShellComponent],
+    imports: [AuthLayoutComponent],
     providers: [
       { provide: Router, useValue: routerStub },
       { provide: ActivatedRoute, useValue: { snapshot: {} } },
@@ -62,7 +62,7 @@ function render(roles: string[] | null, currentUrl: string): {
     ],
   });
 
-  const fixture = TestBed.createComponent(DashboardShellComponent);
+  const fixture = TestBed.createComponent(AuthLayoutComponent);
   const component = fixture.componentInstance;
   const authStore = TestBed.inject(AuthStore);
   if (roles !== null) {
@@ -80,7 +80,7 @@ function render(roles: string[] | null, currentUrl: string): {
   };
 }
 
-describe('DashboardShellComponent — Equipo nav item (PR-5)', () => {
+describe('AuthLayoutComponent — Equipo nav item (PR-5)', () => {
   // -------- warm-up (vitest orphan offset) --------
 
   it('warm-up — component instantiates', () => {

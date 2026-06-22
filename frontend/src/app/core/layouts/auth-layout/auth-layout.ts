@@ -3,10 +3,10 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
 
-import { AuthService } from '../../core/services/auth.service';
-import { AuthStore } from '../../core/state/auth-store';
-import { TenantStore } from '../../core/state/tenant-store';
-import { ButtonComponent } from '../../shared/ui/button';
+import { AuthService } from '../../../core/services/auth.service';
+import { AuthStore } from '../../../core/state/auth-store';
+import { TenantStore } from '../../../core/state/tenant-store';
+import { ButtonComponent } from '../../../shared/ui/button';
 
 interface NavItem {
   readonly label: string;
@@ -44,7 +44,16 @@ function titleForUrl(url: string): string {
 }
 
 /**
- * Dashboard shell — the authenticated workspace layout.
+ * Auth layout — the authenticated workspace shell (previously
+ * named `DashboardShellComponent`).
+ *
+ * <p>This component is mounted as the layout for the `auth`
+ * parent route in `app.routes.ts`. It wraps both the
+ * dashboard home (`/auth/dashboard`) and the team management
+ * feature (`/auth/team/*`). The class was renamed from
+ * `DashboardShellComponent` in etapa-2-usuarios refactor-1
+ * because the shell is no longer "just the dashboard" — it
+ * hosts any authenticated feature page.
  *
  * Renders a 3-region layout per /DESIGN.md:
  * - Left sidebar (240px on desktop, 0px on mobile — for v1 we
@@ -78,13 +87,13 @@ function titleForUrl(url: string): string {
  * redirects to {@code /login}.
  */
 @Component({
-  selector: 'app-dashboard-shell',
+  selector: 'app-auth-layout',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterOutlet, RouterLink, RouterLinkActive, ButtonComponent],
-  templateUrl: './dashboard-shell.html',
+  templateUrl: './auth-layout.html',
 })
-export class DashboardShellComponent {
+export class AuthLayoutComponent {
   protected readonly authStore = inject(AuthStore);
   protected readonly tenantStore = inject(TenantStore);
   private readonly authService = inject(AuthService);
