@@ -12,7 +12,7 @@ import { TenantStore } from '../state/tenant-store';
  * <p>Runs at app bootstrap (via {@code provideAppInitializer})
  * so the auth state is populated BEFORE the router starts
  * evaluating guards. Without this, navigating directly to
- * {@code /dashboard/team} after a page refresh would hit
+ * {@code /auth/team} after a page refresh would hit
  * {@code authGuard} + {@code teamAccessGuard} with an empty
  * {@code _currentUser} signal and redirect to
  * {@code /login} even though the user is still authenticated.

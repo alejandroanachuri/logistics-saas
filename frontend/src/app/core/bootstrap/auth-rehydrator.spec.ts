@@ -16,7 +16,7 @@ import { AuthUser, MeResponse } from '../types';
  * {@code provideAppInitializer}) BEFORE the router evaluates
  * guards, so the {@code AuthStore} is populated by the time
  * {@code authGuard} / {@code teamAccessGuard} look at it.
- * Without this, deep-linking to {@code /dashboard/team} after
+ * Without this, deep-linking to {@code /auth/team} after
  * a page refresh redirected to {@code /login} even when valid
  * session cookies existed, because both guards saw an empty
  * {@code _currentUser} signal.

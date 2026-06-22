@@ -15,8 +15,8 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withFetch(), withInterceptors([authInterceptor, errorInterceptor])),
     // etapa-2-usuarios follow-up: rehydrate auth from session cookies
     // before the router evaluates guards. Without this, cold-booting
-    // directly to /dashboard/team (or any deep link) redirects to
-    // /login because both guards see an empty _currentUser.
+    // directly to /auth/team (or any deep link) redirects to /login
+    // because both guards see an empty _currentUser.
     provideAppInitializer(() => inject(AuthRehydrator).rehydrate()),
   ],
 };

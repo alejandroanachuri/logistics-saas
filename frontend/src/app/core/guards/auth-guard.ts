@@ -5,7 +5,8 @@ import { AuthStore } from '../state/auth-store';
 
 /**
  * Functional {@code CanActivateFn} for routes that require
- * an authenticated user (currently only {@code /dashboard}).
+ * an authenticated user (the `auth` parent route covers
+ * {@code /auth/dashboard} + {@code /auth/team/*}).
  *
  * <p>Reads {@code AuthStore.isAuthenticated()}. The store is
  * the single source of truth — we do NOT call {@code /me}
