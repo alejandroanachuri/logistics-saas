@@ -6,6 +6,8 @@ import ar.com.logistics.auth.jwt.JwtService.TokenScope;
 import ar.com.logistics.auth.security.JwtAuthentication;
 import ar.com.logistics.common.exception.AuthenticationException;
 import ar.com.logistics.common.exception.ErrorCode;
+import ar.com.logistics.tenant.TenantContext;
+import ar.com.logistics.tenant.TenantContextEntry;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -119,6 +121,21 @@ public class AuthenticationFilter extends OncePerRequestFilter {
         // All clear — set the principal.
         JwtAuthentication auth = JwtAuthentication.create(token);
         SecurityContextHolder.getContext().setAuthentication(auth);
+        // Bind the TenantContext for the current request thread.
+        // The RlsAspect reads this on every RLS-scoped repository
+        // call; without it, every request to a company-side
+        // endpoint throws IllegalStateException. The context
+        // MUST be cleared in the `finally` block below to
+        // prevent ThreadLocal leakage across requests on the
+        // same worker thread (per TenantContext.clear()
+        // contract — Tomcat reuses threads).
+        if (token.tenantId() != null) {
+            TenantContext.set(
+                    token.tenantId(),
+                    token.scope() == TokenScope.PLATFORM
+                            ? TenantContextEntry.Scope.PLATFORM
+                            : TenantContextEntry.Scope.COMPANY);
+        }
         try {
             chain.doFilter(req, res);
         } finally {
@@ -128,6 +145,7 @@ public class AuthenticationFilter extends OncePerRequestFilter {
             // is THREAD_LOCAL by default and Tomcat reuses
             // threads).
             SecurityContextHolder.clearContext();
+            TenantContext.clear();
         }
     }
 
@@ -174,8 +192,7 @@ public class AuthenticationFilter extends OncePerRequestFilter {
                 // outranks a no-path one.
                 applies = true;
             } else {
-                applies = requestPath.equals(cookiePath)
-                        || requestPath.startsWith(cookiePath + "/");
+                applies = requestPath.equals(cookiePath) || requestPath.startsWith(cookiePath + "/");
             }
             if (!applies) {
                 continue;

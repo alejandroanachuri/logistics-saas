@@ -7,6 +7,8 @@ import ar.com.logistics.auth.jwt.JwtProperties;
 import ar.com.logistics.auth.jwt.JwtService;
 import ar.com.logistics.common.exception.AuthenticationException;
 import ar.com.logistics.common.exception.ErrorCode;
+import ar.com.logistics.tenant.TenantContext;
+import ar.com.logistics.tenant.TenantContextEntry;
 import java.time.Duration;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
@@ -60,6 +62,7 @@ class AuthenticationFilterTest {
     @AfterEach
     void clearContext() {
         SecurityContextHolder.clearContext();
+        TenantContext.clear();
     }
 
     @Test
@@ -175,8 +178,7 @@ class AuthenticationFilterTest {
     @Test
     @DisplayName("extractAccessTokenCookie: cookies present but none match the name → null")
     void extract_noNameMatch_returnsNull() {
-        jakarta.servlet.http.Cookie other =
-                new jakarta.servlet.http.Cookie("refresh_token", "irrelevant");
+        jakarta.servlet.http.Cookie other = new jakarta.servlet.http.Cookie("refresh_token", "irrelevant");
         other.setPath("/api/v1");
         assertThat(extract("/api/v1/auth/me", other)).isNull();
     }
@@ -189,28 +191,27 @@ class AuthenticationFilterTest {
     }
 
     @Test
-    @DisplayName("extractAccessTokenCookie: both company and platform cookies present on /api/v1/auth/me → returns the company cookie (cold-boot rehydration bug)")
+    @DisplayName(
+            "extractAccessTokenCookie: both company and platform cookies present on /api/v1/auth/me → returns the company cookie (cold-boot rehydration bug)")
     void extract_bothCookiesOnCompanyPath_returnsCompany() {
         // The cold-boot rehydration request that triggers the bug.
         String value = extract(
-                "/api/v1/auth/me",
-                cookie("company-jwt", "/api/v1"),
-                cookie("platform-jwt", "/api/v1/platform"));
+                "/api/v1/auth/me", cookie("company-jwt", "/api/v1"), cookie("platform-jwt", "/api/v1/platform"));
         assertThat(value).isEqualTo("company-jwt");
     }
 
     @Test
-    @DisplayName("extractAccessTokenCookie: both cookies present on /api/v1/platform/users → returns the platform cookie (path-prefix match)")
+    @DisplayName(
+            "extractAccessTokenCookie: both cookies present on /api/v1/platform/users → returns the platform cookie (path-prefix match)")
     void extract_bothCookiesOnPlatformPath_returnsPlatform() {
         String value = extract(
-                "/api/v1/platform/users",
-                cookie("company-jwt", "/api/v1"),
-                cookie("platform-jwt", "/api/v1/platform"));
+                "/api/v1/platform/users", cookie("company-jwt", "/api/v1"), cookie("platform-jwt", "/api/v1/platform"));
         assertThat(value).isEqualTo("platform-jwt");
     }
 
     @Test
-    @DisplayName("extractAccessTokenCookie: multiple matching cookies → longest path wins (RFC 6265 §5.4 most-specific-match)")
+    @DisplayName(
+            "extractAccessTokenCookie: multiple matching cookies → longest path wins (RFC 6265 §5.4 most-specific-match)")
     void extract_multipleMatching_returnsLongestPath() {
         // Reverse insertion order to prove it's not just "first match wins".
         String value = extract(
@@ -219,5 +220,157 @@ class AuthenticationFilterTest {
                 cookie("platform-jwt", "/api/v1/platform"),
                 cookie("admin-jwt", "/api/v1/platform/admin"));
         assertThat(value).isEqualTo("admin-jwt");
+    }
+
+    // ------------------------------------------------------------------
+    // TenantContext binding contract (fix-3).
+    //
+    // RlsAspect reads TenantContext.currentTenantId() on every call
+    // into a RLS-scoped repository and throws IllegalStateException
+    // when it is null. The context MUST be populated by the
+    // authentication filter right after the JWT is verified, with
+    // the scope mirrored from the JWT scope claim, and MUST be
+    // cleared in the finally block to prevent ThreadLocal leakage
+    // across requests on the same Tomcat worker thread.
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName(
+            "TenantContext: COMPANY-scope token binds scope=COMPANY with the JWT tenant id (read DURING the chain)")
+    void setsCompanyTenantContext_whenTokenHasCompanyScope() throws Exception {
+        MockHttpServletRequest req = new MockHttpServletRequest("GET", "/api/v1/company-users");
+        jakarta.servlet.http.Cookie c = new jakarta.servlet.http.Cookie("access_token", validCompanyToken);
+        c.setPath("/api/v1");
+        req.setCookies(c);
+        MockHttpServletResponse res = new MockHttpServletResponse();
+        // Capture the TenantContext state inside the chain (the filter
+        // clears it in the finally block AFTER chain.doFilter returns,
+        // so a post-call read would see null).
+        TenantContextEntry[] captured = new TenantContextEntry[1];
+        jakarta.servlet.FilterChain chain = (request, response) -> captured[0] = TenantContext.get();
+
+        filter.doFilter(req, res, chain);
+
+        assertThat(captured[0]).isNotNull();
+        assertThat(captured[0].tenantId()).isEqualTo(tenantId);
+        assertThat(captured[0].scope()).isEqualTo(TenantContextEntry.Scope.COMPANY);
+        // After the filter returns, the finally block MUST have cleared
+        // the ThreadLocal so the next request on this worker thread does
+        // not inherit the tenant.
+        assertThat(TenantContext.get()).isNull();
+    }
+
+    @Test
+    @DisplayName(
+            "TenantContext: PLATFORM-scope token does NOT bind (tenantId is null), but the SecurityContext principal IS set for the platform user")
+    void setsPlatformTenantContext_whenTokenHasPlatformScope() throws Exception {
+        // Real platform JWTs have tenantId == null (the 'tid' claim is
+        // absent — see JwtService.parseAndVerify line 154). So the
+        // TenantContext binding is gated on tenantId != null. What we
+        // CAN assert: the cross-scope guard allows the request through
+        // (URL is /api/v1/platform/**), the SecurityContext principal
+        // IS bound (the filter authenticates the platform user), and
+        // the TenantContext stays null. If a future refactor moves the
+        // PLATFORM branch of the guard or accidentally binds the
+        // TenantContext for null-tenantId tokens, this test catches
+        // both regressions.
+        MockHttpServletRequest req = new MockHttpServletRequest("GET", "/api/v1/platform/users");
+        jakarta.servlet.http.Cookie c = new jakarta.servlet.http.Cookie("access_token", validPlatformToken);
+        c.setPath("/api/v1/platform");
+        req.setCookies(c);
+        MockHttpServletResponse res = new MockHttpServletResponse();
+        TenantContextEntry[] captured = new TenantContextEntry[1];
+        org.springframework.security.core.Authentication[] capturedAuth =
+                new org.springframework.security.core.Authentication[1];
+        jakarta.servlet.FilterChain chain = (request, response) -> {
+            captured[0] = TenantContext.get();
+            capturedAuth[0] = SecurityContextHolder.getContext().getAuthentication();
+        };
+
+        filter.doFilter(req, res, chain);
+
+        assertThat(captured[0])
+                .as("TenantContext must NOT be bound when the JWT has no tenant id (PLATFORM scope)")
+                .isNull();
+        assertThat(capturedAuth[0])
+                .as("the SecurityContext principal IS still bound for the platform user")
+                .isNotNull()
+                .isInstanceOf(ar.com.logistics.auth.security.JwtAuthentication.class);
+        assertThat(((ar.com.logistics.auth.security.JwtAuthentication) capturedAuth[0])
+                        .parsed()
+                        .scope())
+                .isEqualTo(JwtService.TokenScope.PLATFORM);
+    }
+
+    @Test
+    @DisplayName("TenantContext: cleared in the finally block even when chain.doFilter throws")
+    void clearsTenantContext_inFinallyBlock() throws Exception {
+        MockHttpServletRequest req = new MockHttpServletRequest("GET", "/api/v1/company-users");
+        jakarta.servlet.http.Cookie c = new jakarta.servlet.http.Cookie("access_token", validCompanyToken);
+        c.setPath("/api/v1");
+        req.setCookies(c);
+        MockHttpServletResponse res = new MockHttpServletResponse();
+        // Sanity check: the filter MUST have bound the context BEFORE
+        // the chain ran (so the downstream stack could see the tenant).
+        TenantContextEntry[] seenInsideChain = new TenantContextEntry[1];
+        jakarta.servlet.FilterChain throwingChain = (request, response) -> {
+            seenInsideChain[0] = TenantContext.get();
+            throw new ServletExceptionForTest("downstream blew up");
+        };
+
+        try {
+            filter.doFilter(req, res, throwingChain);
+        } catch (ServletExceptionForTest expected) {
+            // expected — we want to prove the finally ran.
+        }
+
+        assertThat(seenInsideChain[0])
+                .as("TenantContext must have been bound BEFORE the chain ran")
+                .isNotNull();
+        assertThat(seenInsideChain[0].scope()).isEqualTo(TenantContextEntry.Scope.COMPANY);
+        // The whole point of this test: the finally block cleared the
+        // ThreadLocal even though the chain threw. If it had not, the
+        // next request on this worker thread would inherit the tenant.
+        assertThat(TenantContext.get())
+                .as("TenantContext must be cleared even when chain.doFilter throws")
+                .isNull();
+    }
+
+    @Test
+    @DisplayName(
+            "TenantContext: a token without a tenant id (e.g. platform-only) does NOT bind — RlsAspect is allowed to throw later")
+    void doesNotSetTenantContext_whenTokenHasNoTenantId() throws Exception {
+        // Real platform tokens already produce a ParsedToken with
+        // tenantId == null (see JwtService.parseAndVerify line 154 —
+        // the 'tid' claim is absent for PLATFORM-scope JWTs). So we
+        // do NOT need a Mockito mock here: the existing
+        // validPlatformToken from @BeforeEach is exactly that token.
+        // We just hit a /api/v1/platform/** path so the cross-scope
+        // guard does not throw, then assert the TenantContext stays
+        // empty.
+        MockHttpServletRequest req = new MockHttpServletRequest("GET", "/api/v1/platform/users");
+        jakarta.servlet.http.Cookie c = new jakarta.servlet.http.Cookie("access_token", validPlatformToken);
+        c.setPath("/api/v1/platform");
+        req.setCookies(c);
+        MockHttpServletResponse res = new MockHttpServletResponse();
+        TenantContextEntry[] captured = new TenantContextEntry[1];
+        jakarta.servlet.FilterChain chain = (request, response) -> captured[0] = TenantContext.get();
+
+        filter.doFilter(req, res, chain);
+
+        // The spec says: tokens without a tenant id DO NOT bind the
+        // context. The RlsAspect will throw IllegalStateException if a
+        // RLS-scoped repo is hit; that is the loud-failure design.
+        assertThat(captured[0])
+                .as("TenantContext must NOT be bound when the JWT has no tenant id")
+                .isNull();
+        assertThat(TenantContext.get()).isNull();
+    }
+
+    /** Sentinel exception to prove the finally block runs on throw. */
+    private static class ServletExceptionForTest extends jakarta.servlet.ServletException {
+        ServletExceptionForTest(String message) {
+            super(message);
+        }
     }
 }
