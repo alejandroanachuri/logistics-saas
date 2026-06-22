@@ -128,7 +128,7 @@ export class DashboardShellComponent {
       baseItems.splice(1, 0, {
         label: 'Equipo',
         icon: '👥',
-        route: '/team',
+        route: '/dashboard/team',
       });
     }
     return baseItems;
