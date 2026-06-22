@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -29,15 +29,30 @@ interface NavItem {
  * the 4 team pages + the dashboard home + any future feature
  * pages share a single source of truth.
  *
- * Longest paths win (`/team/new` matches before `/team`),
- * so the prefix-first scan below resolves correctly.
+ * <p>Since refactor-1 the canonical paths live under `/auth/`
+ * (`/auth/dashboard`, `/auth/team/*`). The function still
+ * recognises the legacy `/team/*` and `/dashboard` paths so
+ * that mid-navigation events (or stale URLs that haven't
+ * hit the top-level redirect yet) keep the title coherent.
+ *
+ * Longest paths win (`/auth/team/new` matches before
+ * `/auth/team`), so the prefix-first scan below resolves
+ * correctly.
  */
 function titleForUrl(url: string): string {
   // Strip query string + hash + trailing slash for matching.
   const path = url.split('?')[0].split('#')[0].replace(/\/+$/, '') || '/';
-  if (path.startsWith('/team/new')) return 'Nuevo usuario';
-  if (path.startsWith('/team/') && path.endsWith('/edit')) return 'Editar usuario';
-  if (path.match(/^\/team\/[^/]+$/)) return 'Detalle del usuario';
+  if (path === '/auth/team/new' || path.startsWith('/auth/team/new/')) return 'Nuevo usuario';
+  if (path.match(/^\/auth\/team\/[^/]+\/edit\/?$/)) return 'Editar usuario';
+  if (path.match(/^\/auth\/team\/[^/]+\/?$/)) return 'Detalle del usuario';
+  if (path === '/auth/team' || path.startsWith('/auth/team')) return 'Equipo';
+  if (path === '/auth/dashboard') return 'Dashboard';
+  // Legacy paths (pre-refactor-1 routes still recognised so
+  // title updates correctly during the NavigationEnd that
+  // triggers the redirect).
+  if (path === '/team/new' || path.startsWith('/team/new/')) return 'Nuevo usuario';
+  if (path.match(/^\/team\/[^/]+\/edit\/?$/)) return 'Editar usuario';
+  if (path.match(/^\/team\/[^/]+\/?$/)) return 'Detalle del usuario';
   if (path === '/team' || path.startsWith('/team')) return 'Equipo';
   if (path === '/dashboard' || path === '/dashboard/') return 'Dashboard';
   return 'Dashboard';
@@ -123,7 +138,12 @@ export class AuthLayoutComponent {
    */
   protected readonly navItems = computed<readonly NavItem[]>(() => {
     const baseItems: NavItem[] = [
-      { label: 'Dashboard', icon: '◉', route: '/dashboard' },
+      // refactor-1: Dashboard lives at /auth/dashboard (was
+      // /dashboard). The Equipo item below uses absolute
+      // `/team` which the top-level redirect in
+      // app.routes.ts forwards to `/auth/team` so the user
+      // lands inside the shell without a flash.
+      { label: 'Dashboard', icon: '◉', route: '/auth/dashboard' },
       { label: 'Envíos', icon: '➤', route: '/shipments', disabled: true, disabledHint: 'Próximamente' },
       { label: 'Clientes', icon: '◐', route: '/customers', disabled: true, disabledHint: 'Próximamente' },
       { label: 'Reportes', icon: '◈', route: '/reports', disabled: true, disabledHint: 'Próximamente' },
@@ -137,7 +157,7 @@ export class AuthLayoutComponent {
       baseItems.splice(1, 0, {
         label: 'Equipo',
         icon: '👥',
-        route: '/dashboard/team',
+        route: '/team',
       });
     }
     return baseItems;

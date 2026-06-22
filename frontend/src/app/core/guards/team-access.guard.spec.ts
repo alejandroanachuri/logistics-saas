@@ -60,21 +60,21 @@ describe('teamAccessGuard', () => {
     expect(result).toBe(true);
   });
 
-  it('redirects to /dashboard when the user is not a COMPANY_ADMIN', () => {
+  it('redirects to /auth/dashboard when the user is not a COMPANY_ADMIN', () => {
     authStore.setUser(userWithRoles(['COMPANY_OPERATOR']));
 
-    const result = runGuard('/team');
+    const result = runGuard('/auth/team');
 
     expect(router.parseUrl).toHaveBeenCalledTimes(1);
-    expect(router.parseUrl).toHaveBeenCalledWith('/dashboard');
+    expect(router.parseUrl).toHaveBeenCalledWith('/auth/dashboard');
     expect(result).toBe(router.parseUrl.mock.results[0].value);
   });
 
-  it('redirects to /dashboard when no user is signed in', () => {
+  it('redirects to /auth/dashboard when no user is signed in', () => {
     // Store starts empty by default.
-    const result = runGuard('/team');
+    const result = runGuard('/auth/team');
 
-    expect(router.parseUrl).toHaveBeenCalledWith('/dashboard');
+    expect(router.parseUrl).toHaveBeenCalledWith('/auth/dashboard');
     expect(result).toBe(router.parseUrl.mock.results[0].value);
   });
 });
