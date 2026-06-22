@@ -29,11 +29,22 @@ import org.springframework.web.filter.OncePerRequestFilter;
  *
  * <p>Path scoping per ADR-0005: the cookie name
  * {@code access_token} is read from the request's
- * {@code Cookie} header. The cookie's {@code Path} attribute is
- * not consulted here (browsers do send a cookie to any URL under
- * the path it was set with; the path is the server-side contract
- * for the {@code CookieWriter}). A PLATFORM cookie presented to a
- * company path returns 403 {@code FORBIDDEN_SCOPE} per spec
+ * {@code Cookie} header, filtered by the cookie's {@code Path}
+ * attribute per RFC 6265 §5.1.4 (a cookie's Path must be a
+ * prefix of the request URI). This matters when the browser
+ * jar holds both the company cookie ({@code Path=/api/v1}) and
+ * the platform cookie ({@code Path=/api/v1/platform}) — for
+ * example after a user logged into both surfaces. A naive
+ * "first cookie by name" read would hand the platform cookie
+ * to the company rehydrator and trigger 403
+ * {@code FORBIDDEN_SCOPE} on cold-boot requests to
+ * {@code /api/v1/auth/me}. When multiple cookies match, the
+ * one with the longest matching Path wins (RFC 6265 §5.4
+ * most-specific-match rule), so the platform cookie wins on
+ * {@code /api/v1/platform/**} requests.
+ *
+ * <p>A PLATFORM cookie presented to a company path still
+ * returns 403 {@code FORBIDDEN_SCOPE} per spec
  * (refresh-token-rotation.md cross-cutting requirement).
  *
  * <p>Failure modes:
@@ -120,16 +131,67 @@ public class AuthenticationFilter extends OncePerRequestFilter {
         }
     }
 
+    /**
+     * Picks the {@code access_token} cookie whose {@code Path}
+     * matches the request URI. Multiple {@code access_token}
+     * cookies can be in the browser jar — one per scope
+     * (company {@code Path=/api/v1}, platform
+     * {@code Path=/api/v1/platform}). RFC 6265 §5.1.4 says a
+     * cookie's Path must be a prefix of the request URI for
+     * the cookie to apply; we re-apply that rule here to pick
+     * the right one. When multiple cookies apply (e.g. both
+     * {@code /api/v1} and {@code /api/v1/platform} for a
+     * request under {@code /api/v1/platform/**}), §5.4 says the
+     * most specific Path wins — we pick by longest Path.
+     *
+     * <p>Package-private to allow direct unit testing without
+     * standing up a full filter chain.
+     */
+    static String extractAccessTokenCookieForTest(HttpServletRequest req) {
+        return extractAccessTokenCookie(req);
+    }
+
     private static String extractAccessTokenCookie(HttpServletRequest req) {
         Cookie[] cookies = req.getCookies();
         if (cookies == null) {
             return null;
         }
+        String requestPath = req.getRequestURI();
+        String bestValue = null;
+        int bestPathLength = -1;
+        boolean bestHasPath = false;
         for (Cookie c : cookies) {
-            if (Objects.equals(ACCESS_TOKEN_COOKIE, c.getName())) {
-                return c.getValue();
+            if (!Objects.equals(ACCESS_TOKEN_COOKIE, c.getName())) {
+                continue;
+            }
+            String cookiePath = c.getPath();
+            boolean hasPath = cookiePath != null && !cookiePath.isEmpty();
+            boolean applies;
+            if (!hasPath) {
+                // No Path attribute = applies to every request URI
+                // (RFC 6265 §5.1.4 default-path rule). Kept as a
+                // fallback only; a Path-bearing cookie always
+                // outranks a no-path one.
+                applies = true;
+            } else {
+                applies = requestPath.equals(cookiePath)
+                        || requestPath.startsWith(cookiePath + "/");
+            }
+            if (!applies) {
+                continue;
+            }
+            // Longest matching Path wins (RFC 6265 §5.4 most-specific-match).
+            // A no-path cookie is only used when no Path-bearing cookie applies.
+            if (hasPath) {
+                if (!bestHasPath || cookiePath.length() > bestPathLength) {
+                    bestValue = c.getValue();
+                    bestPathLength = cookiePath.length();
+                    bestHasPath = true;
+                }
+            } else if (!bestHasPath) {
+                bestValue = c.getValue();
             }
         }
-        return null;
+        return bestValue;
     }
 }

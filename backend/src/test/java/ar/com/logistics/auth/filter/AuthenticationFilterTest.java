@@ -132,4 +132,92 @@ class AuthenticationFilterTest {
                 .extracting("code")
                 .isEqualTo(ErrorCode.FORBIDDEN_SCOPE);
     }
+
+    // ------------------------------------------------------------------
+    // Cookie path-filter contract (RFC 6265 §5.1.4 + §5.4).
+    //
+    // The browser stores BOTH `access_token` cookies when a user
+    // has logged into both surfaces in the same jar: one with
+    // Path=/api/v1 (company) and one with Path=/api/v1/platform
+    // (platform). On a request to /api/v1/auth/me (a company path),
+    // the browser sends BOTH cookies. The filter must pick the
+    // one whose Path matches the request URI — otherwise it can
+    // hand the PLATFORM cookie to the company rehydrator and the
+    // cross-scope guard fires 403 FORBIDDEN_SCOPE for a perfectly
+    // valid company session.
+    //
+    // These tests pin the contract on the private extraction
+    // method (made package-private for testability).
+    // ------------------------------------------------------------------
+
+    private static jakarta.servlet.http.Cookie cookie(String value, String path) {
+        jakarta.servlet.http.Cookie c = new jakarta.servlet.http.Cookie("access_token", value);
+        if (path != null) {
+            c.setPath(path);
+        }
+        return c;
+    }
+
+    private static String extract(String requestUri, jakarta.servlet.http.Cookie... cookies) {
+        MockHttpServletRequest req = new MockHttpServletRequest("GET", requestUri);
+        if (cookies != null) {
+            req.setCookies(cookies);
+        }
+        return AuthenticationFilter.extractAccessTokenCookieForTest(req);
+    }
+
+    @Test
+    @DisplayName("extractAccessTokenCookie: no cookies at all → null")
+    void extract_noCookies_returnsNull() {
+        assertThat(extract("/api/v1/auth/me")).isNull();
+    }
+
+    @Test
+    @DisplayName("extractAccessTokenCookie: cookies present but none match the name → null")
+    void extract_noNameMatch_returnsNull() {
+        jakarta.servlet.http.Cookie other =
+                new jakarta.servlet.http.Cookie("refresh_token", "irrelevant");
+        other.setPath("/api/v1");
+        assertThat(extract("/api/v1/auth/me", other)).isNull();
+    }
+
+    @Test
+    @DisplayName("extractAccessTokenCookie: single matching cookie with matching path → its value")
+    void extract_singleMatchingCookie_returnsValue() {
+        String value = extract("/api/v1/auth/me", cookie("company-jwt", "/api/v1"));
+        assertThat(value).isEqualTo("company-jwt");
+    }
+
+    @Test
+    @DisplayName("extractAccessTokenCookie: both company and platform cookies present on /api/v1/auth/me → returns the company cookie (cold-boot rehydration bug)")
+    void extract_bothCookiesOnCompanyPath_returnsCompany() {
+        // The cold-boot rehydration request that triggers the bug.
+        String value = extract(
+                "/api/v1/auth/me",
+                cookie("company-jwt", "/api/v1"),
+                cookie("platform-jwt", "/api/v1/platform"));
+        assertThat(value).isEqualTo("company-jwt");
+    }
+
+    @Test
+    @DisplayName("extractAccessTokenCookie: both cookies present on /api/v1/platform/users → returns the platform cookie (path-prefix match)")
+    void extract_bothCookiesOnPlatformPath_returnsPlatform() {
+        String value = extract(
+                "/api/v1/platform/users",
+                cookie("company-jwt", "/api/v1"),
+                cookie("platform-jwt", "/api/v1/platform"));
+        assertThat(value).isEqualTo("platform-jwt");
+    }
+
+    @Test
+    @DisplayName("extractAccessTokenCookie: multiple matching cookies → longest path wins (RFC 6265 §5.4 most-specific-match)")
+    void extract_multipleMatching_returnsLongestPath() {
+        // Reverse insertion order to prove it's not just "first match wins".
+        String value = extract(
+                "/api/v1/platform/admin/tenants",
+                cookie("company-jwt", "/api/v1"),
+                cookie("platform-jwt", "/api/v1/platform"),
+                cookie("admin-jwt", "/api/v1/platform/admin"));
+        assertThat(value).isEqualTo("admin-jwt");
+    }
 }
