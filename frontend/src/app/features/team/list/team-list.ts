@@ -7,7 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 import { AuthStore } from '../../../core/state/auth-store';
 import {
@@ -56,6 +56,7 @@ import { StatusBadgeComponent } from '../../../shared/ui/status-badge';
 export class TeamListComponent {
   protected readonly authStore = inject(AuthStore);
   protected readonly store = inject(CompanyUsersStore);
+  private readonly router = inject(Router);
 
   /** Filter state — each is its own signal so the table
    * effect can react to any of them. The search input is
@@ -143,6 +144,17 @@ export class TeamListComponent {
   /** Reset to page 1 whenever a filter changes. */
   protected onFilterChange(): void {
     this.page.set(1);
+  }
+
+  /**
+   * Navigate to the user-create page. Wired to the empty-state
+   * CTA so admins who have not yet added any team members can
+   * jump straight into the create flow from the list view.
+   * Uses the same canonical `/auth/team/new` path as the header
+   * CTA (see {@link team-list.html}).
+   */
+  protected goToCreateUser(): void {
+    this.router.navigate(['/auth/team/new']);
   }
 
   protected onSearchChange(value: string): void {

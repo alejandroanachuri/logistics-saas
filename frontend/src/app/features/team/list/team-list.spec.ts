@@ -1,5 +1,5 @@
 import { TestBed, ComponentFixture } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { vi } from 'vitest';
 
 import { TeamListComponent } from './team-list';
@@ -62,6 +62,7 @@ describe('TeamListComponent', () => {
     isListEmpty: ReturnType<typeof vi.fn>;
   };
   let loadListCalls: { filters: ListFilters; page?: number }[];
+  let routerNavigateSpy: ReturnType<typeof vi.spyOn>;
 
   function render(roles: string[] | null): void {
     companyUsersStoreMock = {
@@ -92,6 +93,12 @@ describe('TeamListComponent', () => {
     }
     fixture = TestBed.createComponent(TeamListComponent);
     component = fixture.componentInstance;
+    // Spy on the real Router's navigate method. Using the real
+    // Router (provided by provideRouter) and spying on a single
+    // method avoids breaking the router's internal factories
+    // that depend on the instance having its `root` component
+    // configured (which useValue: would clobber).
+    routerNavigateSpy = vi.spyOn(TestBed.inject(Router), 'navigate');
     loadListCalls = [];
   }
 
@@ -175,6 +182,22 @@ describe('TeamListComponent', () => {
     expect(emptyState).toBeTruthy();
     const text = emptyState?.textContent ?? '';
     expect(text).toContain('Todavía no tenés más usuarios en tu equipo');
+  });
+
+  it('navigates to /auth/team/new when the empty-state CTA is clicked', () => {
+    render(['COMPANY_ADMIN']);
+    companyUsersStoreMock.currentCompanyUsers.mockReturnValue([]);
+    companyUsersStoreMock.isListEmpty.mockReturnValue(true);
+    flushInitialLoad();
+    fixture.detectChanges();
+
+    const emptyState = (fixture.nativeElement as HTMLElement).querySelector(
+      'app-empty-state',
+    ) as HTMLElement;
+    const ctaButton = emptyState.querySelector('button') as HTMLButtonElement;
+    ctaButton.click();
+
+    expect(routerNavigateSpy).toHaveBeenCalledWith(['/auth/team/new']);
   });
 
   // -------- populated state --------
