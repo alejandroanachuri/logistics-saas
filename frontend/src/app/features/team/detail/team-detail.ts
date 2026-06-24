@@ -139,7 +139,7 @@ export class TeamDetailComponent implements OnInit {
     const id = this.route.snapshot.paramMap.get('id') ?? '';
     this.targetUserId.set(id);
     if (!id) {
-      void this.router.navigate(['/team']);
+      void this.router.navigate(['/auth/team']);
       return;
     }
     this.loadDetail();
@@ -170,7 +170,7 @@ export class TeamDetailComponent implements OnInit {
   protected editInfo(): void {
     const id = this.targetUserId();
     if (!id) return;
-    void this.router.navigate(['/team', id, 'edit']);
+    void this.router.navigate(['/auth/team', id, 'edit']);
   }
 
   /** Trigger the password reset flow. Opens the reveal modal

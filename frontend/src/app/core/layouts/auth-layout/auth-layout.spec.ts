@@ -113,7 +113,7 @@ describe('AuthLayoutComponent — Equipo nav item (PR-5)', () => {
     const labels = navItems().map((i) => i.label);
     expect(labels).toContain('Equipo');
     const equipo = navItems().find((i) => i.label === 'Equipo')!;
-    expect(equipo.route).toBe('/team');
+    expect(equipo.route).toBe('/auth/team');
   });
 
   it('renders Equipo nav item when the user has COMPANY_ADMIN among other roles', () => {

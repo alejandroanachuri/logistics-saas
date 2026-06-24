@@ -126,7 +126,7 @@ describe('TeamListComponent', () => {
     fixture.detectChanges();
 
     const button = (fixture.nativeElement as HTMLElement).querySelector(
-      'a[href="/team/new"]',
+      'a[href="/auth/team/new"]',
     );
     expect(button).toBeTruthy();
     expect(button?.textContent).toContain('Nuevo usuario');
@@ -138,7 +138,7 @@ describe('TeamListComponent', () => {
     fixture.detectChanges();
 
     const button = (fixture.nativeElement as HTMLElement).querySelector(
-      'a[href="/team/new"]',
+      'a[href="/auth/team/new"]',
     );
     expect(button).toBeNull();
   });

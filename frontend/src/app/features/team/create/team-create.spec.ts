@@ -328,7 +328,7 @@ describe('TeamCreateComponent', () => {
 
   // -------- modal dismiss / create another --------
 
-  it('on modal dismiss, navigates to /team', async () => {
+  it('on modal dismiss, navigates to /auth/team', async () => {
     render(['COMPANY_ADMIN']);
     fillValidForm();
     component.onSubmit();
@@ -339,7 +339,7 @@ describe('TeamCreateComponent', () => {
     component.onPasswordModalDismiss();
 
     expect(component.showPasswordModal()).toBe(false);
-    expect(navigatedTo).toEqual(['/team']);
+    expect(navigatedTo).toEqual(['/auth/team']);
   });
 
   it('on modal "createAnother", closes the modal, clears data, and resets the form', async () => {

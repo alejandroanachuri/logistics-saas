@@ -154,7 +154,7 @@ describe('TeamEditComponent', () => {
 
   // -------- redirect rules --------
 
-  it('redirects to /team/:id when the target is the first admin', async () => {
+  it('redirects to /auth/team/:id when the target is the first admin', async () => {
     render(
       makeUser(['COMPANY_ADMIN'], 'me'),
       makeDetail({ isFirstAdmin: true, id: 'u-target' }),
@@ -163,10 +163,10 @@ describe('TeamEditComponent', () => {
     fixture.detectChanges();
 
     expect(navigatedTo).not.toBeNull();
-    expect(navigatedTo).toEqual(['/team', 'u-target']);
+    expect(navigatedTo).toEqual(['/auth/team', 'u-target']);
   });
 
-  it('redirects to /team/:id when the target is the current user (self)', async () => {
+  it('redirects to /auth/team/:id when the target is the current user (self)', async () => {
     render(
       makeUser(['COMPANY_ADMIN'], 'u-target'),
       makeDetail({ isFirstAdmin: false, id: 'u-target' }),
@@ -175,12 +175,12 @@ describe('TeamEditComponent', () => {
     fixture.detectChanges();
 
     expect(navigatedTo).not.toBeNull();
-    expect(navigatedTo).toEqual(['/team', 'u-target']);
+    expect(navigatedTo).toEqual(['/auth/team', 'u-target']);
   });
 
   // -------- save flow --------
 
-  it('calls store.update with the form values and navigates to /team/:id on success', async () => {
+  it('calls store.update with the form values and navigates to /auth/team/:id on success', async () => {
     render(
       makeUser(['COMPANY_ADMIN'], 'me'),
       makeDetail({ firstName: 'Juan', lastName: 'Pérez', email: 'juan@test.com' }),
@@ -206,7 +206,7 @@ describe('TeamEditComponent', () => {
     // Wait for the promise to resolve and navigation to fire.
     await Promise.resolve();
     await Promise.resolve();
-    expect(navigatedTo).toEqual(['/team', 'u-target']);
+    expect(navigatedTo).toEqual(['/auth/team', 'u-target']);
   });
 
   it('does not submit when the form is invalid', () => {

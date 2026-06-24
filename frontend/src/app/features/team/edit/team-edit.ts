@@ -113,7 +113,7 @@ export class TeamEditComponent implements OnInit {
     const id = this.route.snapshot.paramMap.get('id') ?? '';
     this.targetUserId.set(id);
     if (!id) {
-      void this.router.navigate(['/team']);
+      void this.router.navigate(['/auth/team']);
       return;
     }
     void this.store
@@ -123,14 +123,14 @@ export class TeamEditComponent implements OnInit {
         // page so the admin sees the read-only view + the
         // tooltip explaining why the form is locked.
         if (detail.isFirstAdmin) {
-          void this.router.navigate(['/team', detail.id]);
+          void this.router.navigate(['/auth/team', detail.id]);
           return;
         }
         // Self-edit block: redirect to the detail page;
         // the future "My profile" flow handles self-edits.
         const me = this.authStore.currentUser();
         if (me && me.id === detail.id) {
-          void this.router.navigate(['/team', detail.id]);
+          void this.router.navigate(['/auth/team', detail.id]);
           return;
         }
       })
@@ -138,7 +138,7 @@ export class TeamEditComponent implements OnInit {
         // The errorInterceptor surfaces the localized copy;
         // bounce back to the list page so the user can
         // pick another row.
-        void this.router.navigate(['/team']);
+        void this.router.navigate(['/auth/team']);
       });
   }
 
@@ -163,7 +163,7 @@ export class TeamEditComponent implements OnInit {
       })
       .then(() => {
         this.store.clearDetail();
-        void this.router.navigate(['/team', id]);
+        void this.router.navigate(['/auth/team', id]);
       })
       .catch(() => {
         // Error copy is rendered via the global toast; the
@@ -206,6 +206,6 @@ export class TeamEditComponent implements OnInit {
 
   protected onCancel(): void {
     this.store.clearDetail();
-    void this.router.navigate(['/team', this.targetUserId()]);
+    void this.router.navigate(['/auth/team', this.targetUserId()]);
   }
 }

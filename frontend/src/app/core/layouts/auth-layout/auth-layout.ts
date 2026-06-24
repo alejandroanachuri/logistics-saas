@@ -157,7 +157,7 @@ export class AuthLayoutComponent {
       baseItems.splice(1, 0, {
         label: 'Equipo',
         icon: '👥',
-        route: '/team',
+        route: '/auth/team',
       });
     }
     return baseItems;

@@ -23,14 +23,6 @@ import { teamAccessGuard } from './core/guards/team-access.guard';
  * feature is its own surface. The refactor promoted both to
  * siblings under `auth`.
  *
- * <p>The two top-level `team` redirects at the bottom
- * (`path: 'team'` + `path: 'team/:rest*'`) keep absolute
- * `routerLink="/team/..."` paths from existing code working
- * (the team page components + the Equipo navItem in the
- * shell). They forward to `/auth/team/...` which is the
- * canonical location; the guard fires on the destination
- * route so the role gate is preserved.
- *
  * <p>The two layouts + the auth guard are eagerly imported
  * (they're tiny); the leaf F1 components + the 4 team page
  * components are `loadComponent` lazy so the initial bundle
@@ -112,29 +104,12 @@ export const routes: Routes = [
       },
     ],
   },
-  // --- Legacy absolute `/team/*` paths ---------------------
-  // The team page components + the Equipo navItem in the
-  // shell use absolute `routerLink="/team/..."` paths. After
-  // refactor-1 the canonical location is `/auth/team/...`,
-  // so these top-level redirects forward the legacy paths to
-  // the canonical ones. The teamAccessGuard on `auth/team`
-  // still fires on the destination, so the role gate is
-  // preserved.
-  {
-    path: 'team',
-    redirectTo: 'auth/team',
-    pathMatch: 'full',
-  },
-  {
-    path: 'team/:rest*',
-    redirectTo: 'auth/team/:rest*',
-  },
-  // Wildcard fallback lands inside the workspace shell so
-  // authenticated users hitting a stale bookmark (e.g.
-  // `/dashboard` from before refactor-1) bounce into the
-  // app instead of the public home. The `authGuard` on the
-  // `auth` parent will redirect unauthenticated users to
-  // `/login?returnUrl=...` with `auth/dashboard` as the
-  // returnUrl, which is what we want.
+  // --- Wildcard fallback ---------------------------------
+  // Land inside the workspace shell so authenticated users
+  // hitting a stale bookmark (e.g. `/dashboard` from before
+  // refactor-1) bounce into the app instead of the public
+  // home. The `authGuard` on the `auth` parent will redirect
+  // unauthenticated users to `/login?returnUrl=...` with
+  // `auth/dashboard` as the returnUrl, which is what we want.
   { path: '**', redirectTo: 'auth/dashboard' },
 ];

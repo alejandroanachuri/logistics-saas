@@ -260,7 +260,7 @@ export class TeamCreateComponent {
    * team list. Public for test access. */
   onPasswordModalDismiss(): void {
     this.showPasswordModal.set(false);
-    void this.router.navigate(['/team']);
+    void this.router.navigate(['/auth/team']);
   }
 
   /** Close the modal, clear its data, and reset the form so the

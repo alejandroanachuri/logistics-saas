@@ -10,7 +10,7 @@
     </div>
     @if (authStore.currentUserIsAdmin()) {
       <a
-        routerLink="/team/new"
+        routerLink="/auth/team/new"
         data-testid="new-user-cta"
         class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-on-primary hover:bg-primary-fixed-dim focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
       >
@@ -101,7 +101,7 @@
             @for (row of rows(); track row.id) {
               <tr data-row class="border-t border-outline-variant">
                 <td class="px-4 py-3 text-on-surface">
-                  <a [routerLink]="['/team', row.id]" class="font-medium hover:underline">{{ row.firstName ?? row.username }}</a>
+                  <a [routerLink]="['/auth/team', row.id]" class="font-medium hover:underline">{{ row.firstName ?? row.username }}</a>
                 </td>
                 <td class="px-4 py-3 text-on-surface">{{ row.username }}</td>
                 <td class="px-4 py-3 text-on-surface-variant">{{ row.email }}</td>
@@ -120,7 +120,7 @@
                 </td>
                 <td class="px-4 py-3 text-right">
                   <a
-                    [routerLink]="['/team', row.id]"
+                    [routerLink]="['/auth/team', row.id]"
                     class="inline-flex h-8 items-center rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-sm font-medium text-on-surface hover:bg-surface-container-low"
                   >
                     Ver detalle
