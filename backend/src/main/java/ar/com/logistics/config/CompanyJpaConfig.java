@@ -24,8 +24,11 @@ import org.springframework.transaction.PlatformTransactionManager;
  * RLS policies driven by {@code app.current_tenant}.
  *
  * <p>The entity base packages are the company-side domains:
- * {@code ar.com.logistics.tenant.domain} (Tenant) and
- * {@code ar.com.logistics.auth.domain} (CompanyUser, RefreshToken, Role).
+ * {@code ar.com.logistics.tenant.domain} (Tenant),
+ * {@code ar.com.logistics.auth.domain} (CompanyUser, RefreshToken,
+ * Role) and {@code ar.com.logistics.shipment.domain} (Address,
+ * Customer, Shipment, Package, TrackingEvent, ShipmentCustody,
+ * IdSequence, Branch, ServiceLevel — added in etapa-3 PR-2).
  * The same entity classes are also bound to the
  * {@code systemDataSource} EMF because registration and login need to
  * read/write them as {@code app_admin}; that is fine — Hibernate
@@ -40,7 +43,11 @@ import org.springframework.transaction.PlatformTransactionManager;
  */
 @Configuration(proxyBeanMethods = false)
 @EnableJpaRepositories(
-        basePackages = {"ar.com.logistics.tenant.repository", "ar.com.logistics.auth.repository.company"},
+        basePackages = {
+            "ar.com.logistics.tenant.repository",
+            "ar.com.logistics.auth.repository.company",
+            "ar.com.logistics.shipment.repository.company"
+        },
         entityManagerFactoryRef = "companyEntityManagerFactory",
         transactionManagerRef = "companyTransactionManager")
 public class CompanyJpaConfig {
@@ -82,7 +89,10 @@ public class CompanyJpaConfig {
             throws Exception {
         EntityManagerFactoryBuilder builder = createEntityManagerFactoryBuilder(jpaProperties);
         LocalContainerEntityManagerFactoryBean emfb = builder.dataSource(dataSource)
-                .packages("ar.com.logistics.tenant.domain", "ar.com.logistics.auth.domain")
+                .packages(
+                        "ar.com.logistics.tenant.domain",
+                        "ar.com.logistics.auth.domain",
+                        "ar.com.logistics.shipment.domain")
                 .persistenceUnit("company")
                 .build();
         // Eagerly build the EMF so type lookups against the factory

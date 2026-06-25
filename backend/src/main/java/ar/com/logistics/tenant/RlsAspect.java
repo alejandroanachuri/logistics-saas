@@ -76,16 +76,24 @@ public class RlsAspect {
 
     /**
      * Fires on the company-side repository entry point. The pointcut
-     * matches the {@code tenant.repository} and {@code auth.repository.company}
-     * packages (not the whole Spring Data Repository hierarchy) so it
-     * does not cross into the platform or auth-domain services that
-     * route via systemDataSource. The {@code auth.repository.company}
+     * matches the {@code tenant.repository}, {@code auth.repository.company}
+     * and {@code shipment.repository} packages (not the whole Spring
+     * Data Repository hierarchy) so it does not cross into the
+     * platform or auth-domain services that route via
+     * systemDataSource. The {@code auth.repository.company}
      * subpackage was added in etapa-2 PR-2 when the new
      * {@code CompanyUserRepository} + {@code CompanyUserRoleRepository}
-     * moved into the auth domain but still need RLS tenant isolation.
+     * moved into the auth domain but still need RLS tenant
+     * isolation. The {@code shipment.repository} package is added in
+     * etapa-3 PR-2 (this commit) so the 9 new RLS-scoped repositories
+     * for addresses / customers / shipments / packages /
+     * tracking_events / shipment_custody / id_sequences / branches /
+     * service_levels also pick up the {@code SET LOCAL
+     * app.current_tenant} emission.
      */
-    @Around(
-            "execution(* ar.com.logistics.tenant.repository..*(..)) || execution(* ar.com.logistics.auth.repository.company..*(..))")
+    @Around("execution(* ar.com.logistics.tenant.repository..*(..)) "
+            + "|| execution(* ar.com.logistics.auth.repository.company..*(..)) "
+            + "|| execution(* ar.com.logistics.shipment.repository..*(..))")
     public Object emitCurrentTenant(ProceedingJoinPoint joinPoint) throws Throwable {
         if (!rlsEnabled) {
             return joinPoint.proceed();
