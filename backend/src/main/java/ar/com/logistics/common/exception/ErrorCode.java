@@ -97,7 +97,8 @@ public enum ErrorCode {
     // -- Etapa 3: shipment lifecycle (PR-2 controllers / PR-3 services) -----
 
     /** 422 — FSM transition not allowed by the immutable VALID_TRANSITIONS map. */
-    INVALID_STATE_TRANSITION(422, "INVALID_STATE_TRANSITION", "The requested package state transition is not permitted by the FSM."),
+    INVALID_STATE_TRANSITION(
+            422, "INVALID_STATE_TRANSITION", "The requested package state transition is not permitted by the FSM."),
 
     /** 409 — same tracking_events.event_hash already present; event is idempotent. */
     DUPLICATE_EVENT(409, "DUPLICATE_EVENT", "This event has already been registered (idempotency hash collision)."),
@@ -137,6 +138,9 @@ public enum ErrorCode {
 
     /** 404 — service_level not found. */
     SERVICE_LEVEL_NOT_FOUND(404, "SERVICE_LEVEL_NOT_FOUND", "Service level not found."),
+
+    /** 404 — public tracking id does not match any shipment. */
+    TRACKING_NOT_FOUND(404, "TRACKING_NOT_FOUND", "Tracking id not found."),
 
     /** 403 — tenant's status field is SUSPENDED; cannot create shipments. */
     COMPANY_SUSPENDED(403, "COMPANY_SUSPENDED", "Your company is suspended and cannot create shipments right now."),

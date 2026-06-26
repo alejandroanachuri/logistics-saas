@@ -21,17 +21,24 @@ import org.springframework.transaction.PlatformTransactionManager;
  * JPA + repository configuration for the {@code systemDataSource} —
  * the pool that runs under {@code app_admin} with {@code BYPASSRLS}.
  * Used by registration (writes new tenants + company_users), by
- * login (looks up users across tenants), and by refresh-token
- * validation (reads and rewrites tokens).
+ * login (looks up users across tenants), by refresh-token validation
+ * (reads and rewrites tokens), and by the public tracking portal
+ * (PR-4 Chunk C — reads shipments/packages/customers/tracking_events
+ * across tenants by {@code tracking_id}).
  *
  * <p>The entity packages are the same as the company side (Tenant,
- * CompanyUser, RefreshToken, Role) because the same tables are read
- * cross-tenant under {@code app_admin}. The package split is in the
- * repository layer, not the entity layer.
+ * CompanyUser, RefreshToken, Role, Shipment, Package, Customer,
+ * TrackingEvent) because the same tables are read cross-tenant under
+ * {@code app_admin}. The package split is in the repository layer, not
+ * the entity layer.
  */
 @Configuration(proxyBeanMethods = false)
 @EnableJpaRepositories(
-        basePackages = {"ar.com.logistics.tenant.repository.admin", "ar.com.logistics.auth.repository.system"},
+        basePackages = {
+            "ar.com.logistics.tenant.repository.admin",
+            "ar.com.logistics.auth.repository.system",
+            "ar.com.logistics.shipment.repository.system"
+        },
         entityManagerFactoryRef = "systemEntityManagerFactory",
         transactionManagerRef = "systemTransactionManager")
 public class SystemJpaConfig {
@@ -48,7 +55,10 @@ public class SystemJpaConfig {
             @Qualifier("systemJpaProperties") JpaProperties jpaProperties) {
         EntityManagerFactoryBuilder builder = createEntityManagerFactoryBuilder(jpaProperties);
         return builder.dataSource(dataSource)
-                .packages("ar.com.logistics.tenant.domain", "ar.com.logistics.auth.domain")
+                .packages(
+                        "ar.com.logistics.tenant.domain",
+                        "ar.com.logistics.auth.domain",
+                        "ar.com.logistics.shipment.domain")
                 .persistenceUnit("system")
                 .build();
     }
