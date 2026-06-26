@@ -46,6 +46,12 @@ function titleForUrl(url: string): string {
   if (path.match(/^\/auth\/team\/[^/]+\/edit\/?$/)) return 'Editar usuario';
   if (path.match(/^\/auth\/team\/[^/]+\/?$/)) return 'Detalle del usuario';
   if (path === '/auth/team' || path.startsWith('/auth/team')) return 'Equipo';
+  // etapa-3-envios / PR-7 (Chunk A — list + detail only).
+  // The wizard and edit children land under separate routes
+  // added in Chunk B; once those land we will extend this
+  // branch with the matching titles.
+  if (path.match(/^\/auth\/shipments\/[^/]+\/?$/)) return 'Detalle del envío';
+  if (path === '/auth/shipments' || path.startsWith('/auth/shipments')) return 'Envíos';
   if (path === '/auth/dashboard') return 'Dashboard';
   // Legacy paths (pre-refactor-1 routes still recognised so
   // title updates correctly during the NavigationEnd that
@@ -144,7 +150,21 @@ export class AuthLayoutComponent {
       // app.routes.ts forwards to `/auth/team` so the user
       // lands inside the shell without a flash.
       { label: 'Dashboard', icon: '◉', route: '/auth/dashboard' },
-      { label: 'Envíos', icon: '➤', route: '/shipments', disabled: true, disabledHint: 'Próximamente' },
+      // etapa-3-envios / PR-7 Chunk A: the Envíos item is
+      // enabled here. ADMIN OR OPERATOR roles can see the
+      // link — both roles operate shipments at the branch.
+      // VIEWER/DRIVER can still navigate to /auth/shipments
+      // via the route guard (which permits any authenticated
+      // company user); the sidebar just hides the link for
+      // them to reduce visual clutter.
+      {
+        label: 'Envíos',
+        icon: '➤',
+        route: '/auth/shipments',
+        visible: () =>
+          this.authStore.currentUserIsAdmin() ||
+          this.authStore.currentUserRoles().includes('COMPANY_OPERATOR'),
+      },
       // etapa-3-envios / PR-6 Chunk B: the Clientes item is
       // enabled here. AuthStore has no `currentUserIsOperator`
       // computed yet, so the gate uses the same local-fallback

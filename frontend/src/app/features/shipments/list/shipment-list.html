@@ -1,0 +1,177 @@
+<section data-testid="shipment-list" class="space-y-6">
+  <!-- Header: H1 + primary CTA (admin OR operator) -->
+  <header class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold text-on-surface">Envíos</h1>
+      <p class="mt-1 text-sm text-on-surface-variant">
+        Gestioná los envíos de tu empresa. Filtrá por estado para ver una etapa
+        específica del ciclo de vida.
+      </p>
+    </div>
+    @if (canCreate()) {
+      <a
+        routerLink="/auth/shipments/new"
+        data-testid="new-shipment-cta"
+        class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-on-primary hover:bg-primary-fixed-dim focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+      >
+        + Nuevo envío
+      </a>
+    }
+  </header>
+
+  <!-- Filter bar: search + status -->
+  <div
+    class="grid grid-cols-1 gap-3 rounded-md border border-outline-variant bg-surface-container-lowest p-4 md:grid-cols-2"
+    aria-label="Filtros"
+  >
+    <div class="space-y-1">
+      <label
+        for="shipment-search"
+        class="block text-xs font-semibold uppercase tracking-wide text-on-surface-variant"
+      >
+        Buscar
+      </label>
+      <input
+        id="shipment-search"
+        type="search"
+        [value]="searchTerm()"
+        (input)="onSearchChange($any($event.target).value)"
+        placeholder="Tracking ID, código de referencia"
+        class="block w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+      />
+    </div>
+    <div class="space-y-1">
+      <label
+        for="shipment-status"
+        class="block text-xs font-semibold uppercase tracking-wide text-on-surface-variant"
+      >
+        Estado
+      </label>
+      <select
+        id="shipment-status"
+        [value]="statusFilter()"
+        (change)="onStatusChange($any($event.target).value)"
+        class="block w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+      >
+        <option value="ALL">Todos</option>
+        @for (status of statusOptions; track status) {
+          <option [value]="status">{{ status }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  <!-- Empty state -->
+  @if (showEmptyState()) {
+    <app-empty-state
+      icon="📦"
+      title="Todavía no tenés envíos"
+      message="Creá el primero para empezar a operar la logística de tu empresa."
+      ctaLabel="+ Nuevo envío"
+      (ctaClick)="goToCreateShipment()"
+    />
+  }
+
+  <!-- Data table -->
+  @if (showTable()) {
+    <div class="rounded-md border border-outline-variant bg-surface-container-lowest p-4">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="text-on-surface-variant">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                Tracking ID
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                Remitente
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                Destinatario
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                Estado
+              </th>
+              <th
+                class="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide md:table-cell"
+              >
+                Fecha de creación
+              </th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide">
+                Acciones
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rows(); track row.id) {
+              <tr data-row class="border-t border-outline-variant">
+                <td class="px-4 py-3 text-on-surface">
+                  <span
+                    data-tracking-id
+                    class="font-mono text-sm font-medium tracking-tight"
+                    >{{ row.trackingId }}</span
+                  >
+                  @if (row.code) {
+                    <span class="ml-2 text-xs text-on-surface-variant"
+                      >· {{ row.code }}</span
+                    >
+                  }
+                </td>
+                <td class="px-4 py-3 text-on-surface">
+                  {{ row.senderName ?? '—' }}
+                </td>
+                <td class="px-4 py-3 text-on-surface">
+                  {{ row.receiverName ?? '—' }}
+                </td>
+                <td class="px-4 py-3">
+                  <app-shipment-status-badge [status]="$any(row.status)" />
+                </td>
+                <td class="hidden px-4 py-3 text-on-surface-variant md:table-cell">
+                  {{ formatDateTime(row.createdAt) }}
+                </td>
+                <td class="px-4 py-3 text-right">
+                  <a
+                    [routerLink]="['/auth/shipments', row.id]"
+                    class="inline-flex h-8 items-center rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-sm font-medium text-on-surface hover:bg-surface-container-low"
+                    >Ver detalle</a
+                  >
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Pagination footer -->
+    <nav class="flex flex-wrap items-center justify-between gap-2" aria-label="Paginación">
+      <p class="text-sm text-on-surface-variant" data-pagination-summary>
+        Página {{ pagination().page }} · {{ pagination().total }} resultados
+      </p>
+      <div class="flex gap-2">
+        <button
+          type="button"
+          data-page-prev
+          [disabled]="pagination().page <= 1"
+          (click)="onPage({ page: pagination().page - 1, size: pagination().size })"
+          class="inline-flex h-9 items-center rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-sm font-medium text-on-surface hover:bg-surface-container-low disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Anterior
+        </button>
+        <button
+          type="button"
+          data-page-next
+          [disabled]="pagination().page * pagination().size >= pagination().total"
+          (click)="onPage({ page: pagination().page + 1, size: pagination().size })"
+          class="inline-flex h-9 items-center rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-sm font-medium text-on-surface hover:bg-surface-container-low disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Siguiente
+        </button>
+      </div>
+    </nav>
+  }
+
+  <!-- Loading state -->
+  @if (store.isLoading()) {
+    <p class="text-sm text-on-surface-variant" data-testid="loading">Cargando...</p>
+  }
+</section>

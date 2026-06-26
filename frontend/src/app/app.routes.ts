@@ -3,6 +3,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth-guard';
 import { teamAccessGuard } from './core/guards/team-access.guard';
 import { customerAccessGuard } from './core/guards/customer-access.guard';
+import { shipmentAccessGuard } from './core/guards/shipment-access.guard';
 
 /**
  * F1 + gap-#5 + etapa-2-usuarios routes. Two top-level
@@ -132,6 +133,30 @@ export const routes: Routes = [
             path: ':id/edit',
             loadComponent: () =>
               import('./features/customers/edit/customer-edit').then((m) => m.CustomerEditComponent),
+          },
+        ],
+      },
+      {
+        // etapa-3-envios / PR-7 (Chunk A — list + detail only).
+        // The shipmentAccessGuard fires once at the
+        // `/auth/shipments` parent level; unlike teamAccessGuard
+        // it does NOT require admin — shipments are the core
+        // operational entity and operators must be able to
+        // browse + manage them. The list + detail children
+        // are wired here; the create wizard + edit page are
+        // registered in PR-7 Chunk B.
+        path: 'shipments',
+        canActivate: [shipmentAccessGuard],
+        children: [
+          {
+            path: '',
+            loadComponent: () =>
+              import('./features/shipments/list/shipment-list').then((m) => m.ShipmentListComponent),
+          },
+          {
+            path: ':id',
+            loadComponent: () =>
+              import('./features/shipments/detail/shipment-detail').then((m) => m.ShipmentDetailComponent),
           },
         ],
       },

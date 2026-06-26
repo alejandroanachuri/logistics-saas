@@ -1,0 +1,463 @@
+<section data-testid="shipment-detail" class="space-y-6">
+  <!-- Back link -->
+  <div>
+    <a
+      routerLink="/auth/shipments"
+      class="inline-flex items-center text-sm font-medium text-primary hover:underline"
+      data-testid="back-link"
+    >
+      ← Volver a envíos
+    </a>
+  </div>
+
+  <!-- Header: trackingId + status badge + sender → receiver -->
+  <header class="flex flex-wrap items-start justify-between gap-3">
+    <div class="space-y-2">
+      <h1 class="text-2xl font-semibold text-on-surface">
+        <span
+          data-tracking-id
+          class="font-mono text-2xl font-semibold tracking-tight"
+          >{{ shipment()?.trackingId }}</span
+        >
+      </h1>
+      <p class="text-sm text-on-surface-variant">
+        @if (shipment()?.sender; as s) {
+          <span>{{ s.name }}</span>
+        } @else {
+          <span>—</span>
+        }
+        <span aria-hidden="true">→</span>
+        @if (shipment()?.receiver; as r) {
+          <span>{{ r.name }}</span>
+        } @else {
+          <span>—</span>
+        }
+      </p>
+      @if (shipment()?.code) {
+        <p class="text-xs text-on-surface-variant">
+          Referencia: <span class="font-mono">{{ shipment()?.code }}</span>
+        </p>
+      }
+    </div>
+    @if (shipment(); as s) {
+      <app-shipment-status-badge [status]="$any(s.status)" />
+    }
+  </header>
+
+  <!-- Tabs -->
+  <div class="border-b border-outline-variant">
+    <nav class="flex gap-1" aria-label="Secciones del envío">
+      <button
+        type="button"
+        data-testid="tab-info-button"
+        (click)="selectedTab.set('info')"
+        [attr.aria-current]="selectedTab() === 'info' ? 'page' : null"
+        [class.border-b-2]="selectedTab() === 'info'"
+        [class.border-primary]="selectedTab() === 'info'"
+        [class.text-primary]="selectedTab() === 'info'"
+        [class.text-on-surface-variant]="selectedTab() !== 'info'"
+        class="inline-flex h-10 items-center px-4 text-sm font-semibold"
+      >
+        Información
+      </button>
+      <button
+        type="button"
+        data-testid="tab-packages-button"
+        (click)="selectedTab.set('packages')"
+        [attr.aria-current]="selectedTab() === 'packages' ? 'page' : null"
+        [class.border-b-2]="selectedTab() === 'packages'"
+        [class.border-primary]="selectedTab() === 'packages'"
+        [class.text-primary]="selectedTab() === 'packages'"
+        [class.text-on-surface-variant]="selectedTab() !== 'packages'"
+        class="inline-flex h-10 items-center px-4 text-sm font-semibold"
+      >
+        Paquetes ({{ packageCount() }})
+      </button>
+      <button
+        type="button"
+        data-testid="tab-timeline-button"
+        (click)="selectedTab.set('timeline')"
+        [attr.aria-current]="selectedTab() === 'timeline' ? 'page' : null"
+        [class.border-b-2]="selectedTab() === 'timeline'"
+        [class.border-primary]="selectedTab() === 'timeline'"
+        [class.text-primary]="selectedTab() === 'timeline'"
+        [class.text-on-surface-variant]="selectedTab() !== 'timeline'"
+        class="inline-flex h-10 items-center px-4 text-sm font-semibold"
+      >
+        Timeline
+      </button>
+    </nav>
+  </div>
+
+  <!-- Tab content -->
+  @if (shipment(); as s) {
+    @if (selectedTab() === 'info') {
+      <section data-testid="tab-info" class="space-y-6">
+        <dl
+          class="grid grid-cols-1 gap-x-6 gap-y-3 rounded-md border border-outline-variant bg-surface-container-lowest p-6 md:grid-cols-2"
+        >
+          <div class="space-y-1">
+            <dt
+              class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant"
+            >
+              Tracking ID
+            </dt>
+            <dd class="font-mono text-sm text-on-surface">{{ s.trackingId }}</dd>
+          </div>
+          @if (s.code) {
+            <div class="space-y-1">
+              <dt
+                class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant"
+              >
+                Referencia
+              </dt>
+              <dd class="font-mono text-sm text-on-surface">{{ s.code }}</dd>
+            </div>
+          }
+          <div class="space-y-1">
+            <dt
+              class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant"
+            >
+              Remitente
+            </dt>
+            <dd class="text-sm text-on-surface">{{ s.sender?.name ?? '—' }}</dd>
+          </div>
+          <div class="space-y-1">
+            <dt
+              class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant"
+            >
+              Destinatario
+            </dt>
+            <dd class="text-sm text-on-surface">{{ s.receiver?.name ?? '—' }}</dd>
+          </div>
+          <div class="space-y-1 md:col-span-2">
+            <dt
+              class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant"
+            >
+              Dirección de entrega
+            </dt>
+            <dd class="text-sm text-on-surface">
+              {{ s.deliveryAddress?.displayLabel ?? '—' }}
+            </dd>
+          </div>
+          <div class="space-y-1">
+            <dt
+              class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant"
+            >
+              Sucursal de origen
+            </dt>
+            <dd class="text-sm text-on-surface">
+              {{ s.originBranch ? s.originBranch.code + ' — ' + s.originBranch.name : '—' }}
+            </dd>
+          </div>
+          <div class="space-y-1">
+            <dt
+              class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant"
+            >
+              Sucursal de destino
+            </dt>
+            <dd class="text-sm text-on-surface">
+              {{ s.destinationBranch ? s.destinationBranch.code + ' — ' +
+              s.destinationBranch.name : '—' }}
+            </dd>
+          </div>
+          <div class="space-y-1">
+            <dt
+              class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant"
+            >
+              Nivel de servicio
+            </dt>
+            <dd class="text-sm text-on-surface">
+              {{ s.serviceLevel ? s.serviceLevel.code + ' — ' + s.serviceLevel.name :
+              '—' }}
+            </dd>
+          </div>
+          <div class="space-y-1">
+            <dt
+              class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant"
+            >
+              Tipo de pago
+            </dt>
+            <dd class="text-sm text-on-surface">{{ displayPaymentType(s.paymentType) }}</dd>
+          </div>
+          <div class="space-y-1">
+            <dt
+              class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant"
+            >
+              Modalidad de entrega
+            </dt>
+            <dd class="text-sm text-on-surface">{{ displayDeliveryMode(s.deliveryMode) }}</dd>
+          </div>
+          <div class="space-y-1 md:col-span-2">
+            <dt
+              class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant"
+            >
+              Instrucciones de entrega
+            </dt>
+            <dd class="text-sm text-on-surface">
+              {{ s.deliveryInstructions ?? '—' }}
+            </dd>
+          </div>
+          <div class="space-y-1">
+            <dt
+              class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant"
+            >
+              Cantidad de paquetes
+            </dt>
+            <dd class="text-sm text-on-surface">{{ packageCount() }}</dd>
+          </div>
+          <div class="space-y-1">
+            <dt
+              class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant"
+            >
+              Peso total
+            </dt>
+            <dd class="text-sm text-on-surface">
+              {{ s.totalWeightKg !== null ? s.totalWeightKg + ' kg' : '—' }}
+            </dd>
+          </div>
+          <div class="space-y-1">
+            <dt
+              class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant"
+            >
+              Costo total
+            </dt>
+            <dd class="text-sm text-on-surface">{{ formatCurrency(s.totalCost) }}</dd>
+          </div>
+          <div class="space-y-1">
+            <dt
+              class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant"
+            >
+              Creado
+            </dt>
+            <dd class="text-sm text-on-surface">{{ formatDateTime(s.createdAt) }}</dd>
+          </div>
+        </dl>
+
+        <!-- Action buttons (gated by role + status) -->
+        <div class="flex flex-wrap items-center justify-end gap-2">
+          @if (canMutate() && isPreAlta()) {
+            <a
+              [routerLink]="['/auth/shipments', targetShipmentId(), 'edit']"
+              data-testid="edit-shipment-button"
+              class="inline-flex h-10 items-center justify-center rounded-md border border-outline-variant bg-surface-container-lowest px-4 text-sm font-semibold text-on-surface hover:bg-surface-container-low focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            >
+              Editar
+            </a>
+            <button
+              type="button"
+              (click)="showRejectForm.set(true)"
+              data-testid="reject-shipment-button"
+              class="inline-flex h-10 items-center justify-center rounded-md border border-outline-variant bg-surface-container-lowest px-4 text-sm font-semibold text-on-surface hover:bg-surface-container-low focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            >
+              Rechazar
+            </button>
+            <button
+              type="button"
+              (click)="showValidateConfirm.set(true)"
+              data-testid="validate-shipment-button"
+              class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-on-primary hover:bg-primary-fixed-dim focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            >
+              Validar
+            </button>
+          }
+          @if (canCancel()) {
+            <button
+              type="button"
+              (click)="showCancelForm.set(true)"
+              data-testid="cancel-shipment-button"
+              class="inline-flex h-10 items-center justify-center rounded-md bg-error px-4 text-sm font-semibold text-on-error hover:bg-error/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error focus-visible:ring-offset-2"
+            >
+              Cancelar envío
+            </button>
+          }
+        </div>
+      </section>
+    }
+
+    @if (selectedTab() === 'packages') {
+      <section data-testid="tab-packages" class="space-y-4">
+        @if (s.packages.length === 0) {
+          <p class="text-sm text-on-surface-variant">
+            Este envío no tiene paquetes registrados.
+          </p>
+        } @else {
+          <ul class="space-y-3">
+            @for (pkg of s.packages; track pkg.id) {
+              <li
+                data-row
+                class="rounded-md border border-outline-variant bg-surface-container-lowest p-4"
+              >
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                  <div class="space-y-1">
+                    <p class="font-mono text-sm font-semibold text-on-surface">
+                      {{ pkg.qrCode }}
+                    </p>
+                    <p class="text-xs text-on-surface-variant">
+                      {{ pkg.contentDescription }} · {{ pkg.weightKg }} kg
+                      @if (pkg.dimensionsCm) {
+                        · {{ pkg.dimensionsCm }}
+                      }
+                    </p>
+                    <div class="flex flex-wrap gap-1">
+                      @if (pkg.isFragile) {
+                        <span
+                          class="inline-flex items-center rounded-full bg-warning-container px-2 py-0.5 text-xs text-on-warning-container"
+                          >Frágil</span
+                        >
+                      }
+                      @if (pkg.isUrgent) {
+                        <span
+                          class="inline-flex items-center rounded-full bg-error-container px-2 py-0.5 text-xs text-on-error-container"
+                          >Urgente</span
+                        >
+                      }
+                      @if (pkg.requiresSignature) {
+                        <span
+                          class="inline-flex items-center rounded-full bg-secondary-container px-2 py-0.5 text-xs text-on-secondary-container"
+                          >Requiere firma</span
+                        >
+                      }
+                    </div>
+                  </div>
+                  <app-package-status-badge [status]="$any(pkg.status)" />
+                </div>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    }
+
+    @if (selectedTab() === 'timeline') {
+      <section data-testid="tab-timeline" class="rounded-md border border-outline-variant bg-surface-container-lowest p-6">
+        <app-tracking-timeline [events]="timelineEvents()" />
+      </section>
+    }
+  }
+
+  <!-- Loading state -->
+  @if (isLoading()) {
+    <p class="text-sm text-on-surface-variant" data-testid="loading">Cargando...</p>
+  }
+
+  <!-- Error state -->
+  @if (errorMessage(); as msg) {
+    <p class="text-sm text-error" data-testid="error" role="alert">{{ msg }}</p>
+  }
+
+  <!-- Validate confirm -->
+  @if (showValidateConfirm()) {
+    <app-confirm-dialog
+      title="Validar envío"
+      message="¿Validar este envío? Pasará de PRE_ALTA a CREADO y no podrá editarlo después."
+      confirmLabel="Validar"
+      cancelLabel="Cancelar"
+      [destructive]="false"
+      (confirm)="validate()"
+      (cancel)="showValidateConfirm.set(false)"
+    />
+  }
+
+  <!-- Reject form (reason input + confirm dialog) -->
+  @if (showRejectForm()) {
+    <div
+      data-overlay
+      role="dialog"
+      aria-modal="true"
+      (click)="showRejectForm.set(false)"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-on-surface/60 p-4"
+    >
+      <div
+        data-panel
+        (click)="$event.stopPropagation()"
+        class="w-full max-w-md rounded-md border border-outline-variant bg-surface-container-lowest p-6 elev-2"
+      >
+        <h2 class="text-lg font-semibold text-on-surface">Rechazar envío</h2>
+        <p class="mt-2 text-sm text-on-surface-variant">
+          Indicanos el motivo del rechazo. El envío quedará en estado CANCELADO.
+        </p>
+        <div class="mt-4">
+          <app-input
+            inputId="rejection-reason"
+            label="Motivo"
+            [value]="rejectionReason()"
+            [required]="true"
+            [error]="rejectionReason().trim().length === 0 ? 'El motivo es obligatorio.' : null"
+            (valueChange)="rejectionReason.set($event)"
+          />
+        </div>
+        <div class="mt-6 flex justify-end gap-2">
+          <button
+            type="button"
+            data-cancel
+            (click)="showRejectForm.set(false)"
+            class="inline-flex h-10 items-center justify-center rounded-md border border-outline-variant bg-surface-container-lowest px-4 text-sm font-semibold text-on-surface hover:bg-surface-container-low"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            data-confirm
+            [disabled]="rejectionReason().trim().length === 0"
+            (click)="reject()"
+            class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-on-primary hover:bg-primary-fixed-dim disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Rechazar
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Cancel form (reason input + confirm dialog) -->
+  @if (showCancelForm()) {
+    <div
+      data-overlay
+      role="dialog"
+      aria-modal="true"
+      (click)="showCancelForm.set(false)"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-on-surface/60 p-4"
+    >
+      <div
+        data-panel
+        (click)="$event.stopPropagation()"
+        class="w-full max-w-md rounded-md border border-outline-variant bg-surface-container-lowest p-6 elev-2"
+      >
+        <h2 class="text-lg font-semibold text-on-surface">Cancelar envío</h2>
+        <p class="mt-2 text-sm text-on-surface-variant">
+          Esta acción no se puede deshacer. Indicá el motivo.
+        </p>
+        <div class="mt-4">
+          <app-input
+            inputId="cancel-reason"
+            label="Motivo"
+            [value]="cancelReason()"
+            [required]="true"
+            [error]="cancelReason().trim().length === 0 ? 'El motivo es obligatorio.' : null"
+            (valueChange)="cancelReason.set($event)"
+          />
+        </div>
+        <div class="mt-6 flex justify-end gap-2">
+          <button
+            type="button"
+            data-cancel
+            (click)="showCancelForm.set(false)"
+            class="inline-flex h-10 items-center justify-center rounded-md border border-outline-variant bg-surface-container-lowest px-4 text-sm font-semibold text-on-surface hover:bg-surface-container-low"
+          >
+            Volver
+          </button>
+          <button
+            type="button"
+            data-confirm
+            [disabled]="cancelReason().trim().length === 0"
+            (click)="cancel()"
+            class="inline-flex h-10 items-center justify-center rounded-md bg-error px-4 text-sm font-semibold text-on-error hover:bg-error/90 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Cancelar envío
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</section>
