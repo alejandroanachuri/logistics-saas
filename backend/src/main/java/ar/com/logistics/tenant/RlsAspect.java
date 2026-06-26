@@ -125,11 +125,24 @@ public class RlsAspect {
         // that runs the same SET LOCAL on every statement's connection
         // — defense in depth in case Hibernate switches connections
         // mid-transaction (it doesn't, but the cost is negligible).
-        try (java.sql.Connection conn =
-                org.springframework.jdbc.datasource.DataSourceUtils.getConnection(COMPANY_DATA_SOURCE)) {
+        // DataSourceUtils.getConnection returns the connection bound to
+        // the current transaction. We MUST NOT close it via try-with-resources
+        // because that hands the connection back to the pool / closes it,
+        // breaking the subsequent Hibernate statement (which is held open
+        // on that same connection). The correct pattern is to obtain the
+        // connection, do the work, and leave the close to Spring's tx
+        // machinery (which happens automatically at tx completion).
+        java.sql.Connection conn = null;
+        try {
+            conn = org.springframework.jdbc.datasource.DataSourceUtils.getConnection(COMPANY_DATA_SOURCE);
             setCurrentTenantOnConnection(conn, tenantId);
         } catch (java.sql.SQLException ex) {
             throw new IllegalStateException("Failed to emit SET LOCAL app.current_tenant before query execution", ex);
+        } finally {
+            // No-op close. DataSourceUtils manages the connection lifecycle
+            // via the active transaction. We MUST NOT call conn.close()
+            // here — that would close the connection BEFORE Hibernate has
+            // a chance to use it for the actual user query.
         }
         return joinPoint.proceed();
     }
