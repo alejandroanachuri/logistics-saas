@@ -37,8 +37,7 @@ export const routes: Routes = [
   },
   {
     path: 'login',
-    loadComponent: () =>
-      import('./features/login/login').then((m) => m.LoginComponent),
+    loadComponent: () => import('./features/login/login').then((m) => m.LoginComponent),
   },
   {
     path: 'register',
@@ -47,13 +46,31 @@ export const routes: Routes = [
   },
   {
     path: 'terms',
-    loadComponent: () =>
-      import('./features/terms/terms').then((m) => m.TermsComponent),
+    loadComponent: () => import('./features/terms/terms').then((m) => m.TermsComponent),
   },
   {
     path: 'privacy',
+    loadComponent: () => import('./features/privacy/privacy').then((m) => m.PrivacyComponent),
+  },
+  {
+    // etapa-3-envios / PR-7 (Chunk C — public portal
+    // frontend). The customer-facing tracking page at
+    // `/track/:lgstid`. Public: NO `canActivate` and NO
+    // `authGuard` — anonymous visitors are the whole point.
+    // The {@code PublicTrackLayoutComponent} acts as the
+    // layout wrapper (brand header + outlet + footer); the
+    // leaf `PublicTrackComponent` reads the `:lgstid` route
+    // param via `withComponentInputBinding()`.
+    path: 'track',
     loadComponent: () =>
-      import('./features/privacy/privacy').then((m) => m.PrivacyComponent),
+      import('./shared/ui/public-track-layout').then((m) => m.PublicTrackLayoutComponent),
+    children: [
+      {
+        path: ':lgstid',
+        loadComponent: () =>
+          import('./features/track/public-track').then((m) => m.PublicTrackComponent),
+      },
+    ],
   },
   {
     // etapa-2-usuarios refactor-1: the authenticated shell
@@ -69,9 +86,7 @@ export const routes: Routes = [
       {
         path: 'dashboard',
         loadComponent: () =>
-          import('./features/dashboard/dashboard').then(
-            (m) => m.DashboardComponent,
-          ),
+          import('./features/dashboard/dashboard').then((m) => m.DashboardComponent),
       },
       {
         // etapa-2-usuarios / PR-5 — team management feature.
@@ -117,22 +132,30 @@ export const routes: Routes = [
           {
             path: '',
             loadComponent: () =>
-              import('./features/customers/list/customer-list').then((m) => m.CustomerListComponent),
+              import('./features/customers/list/customer-list').then(
+                (m) => m.CustomerListComponent,
+              ),
           },
           {
             path: 'new',
             loadComponent: () =>
-              import('./features/customers/create/customer-create').then((m) => m.CustomerCreateComponent),
+              import('./features/customers/create/customer-create').then(
+                (m) => m.CustomerCreateComponent,
+              ),
           },
           {
             path: ':id',
             loadComponent: () =>
-              import('./features/customers/detail/customer-detail').then((m) => m.CustomerDetailComponent),
+              import('./features/customers/detail/customer-detail').then(
+                (m) => m.CustomerDetailComponent,
+              ),
           },
           {
             path: ':id/edit',
             loadComponent: () =>
-              import('./features/customers/edit/customer-edit').then((m) => m.CustomerEditComponent),
+              import('./features/customers/edit/customer-edit').then(
+                (m) => m.CustomerEditComponent,
+              ),
           },
         ],
       },
@@ -149,7 +172,9 @@ export const routes: Routes = [
           {
             path: '',
             loadComponent: () =>
-              import('./features/shipments/list/shipment-list').then((m) => m.ShipmentListComponent),
+              import('./features/shipments/list/shipment-list').then(
+                (m) => m.ShipmentListComponent,
+              ),
           },
           {
             // etapa-3-envios / PR-7 Chunk B — the create
@@ -157,12 +182,16 @@ export const routes: Routes = [
             // bundles stay small.
             path: 'new',
             loadComponent: () =>
-              import('./features/shipments/wizard/shipment-create').then((m) => m.ShipmentCreateComponent),
+              import('./features/shipments/wizard/shipment-create').then(
+                (m) => m.ShipmentCreateComponent,
+              ),
           },
           {
             path: ':id',
             loadComponent: () =>
-              import('./features/shipments/detail/shipment-detail').then((m) => m.ShipmentDetailComponent),
+              import('./features/shipments/detail/shipment-detail').then(
+                (m) => m.ShipmentDetailComponent,
+              ),
           },
           {
             // etapa-3-envios / PR-7 Chunk B — the edit page.
@@ -172,7 +201,9 @@ export const routes: Routes = [
             // hits it from a non-editable state).
             path: ':id/edit',
             loadComponent: () =>
-              import('./features/shipments/edit/shipment-edit').then((m) => m.ShipmentEditComponent),
+              import('./features/shipments/edit/shipment-edit').then(
+                (m) => m.ShipmentEditComponent,
+              ),
           },
         ],
       },
