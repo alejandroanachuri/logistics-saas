@@ -135,8 +135,14 @@ public class RlsAspect {
         java.sql.Connection conn = null;
         try {
             conn = org.springframework.jdbc.datasource.DataSourceUtils.getConnection(COMPANY_DATA_SOURCE);
+            LOG.info("RlsAspect: got connection {}, emitting SET LOCAL tenant={}", conn, tenantId);
             setCurrentTenantOnConnection(conn, tenantId);
+            LOG.info("RlsAspect: SET LOCAL emitted successfully on connection {}", conn);
         } catch (java.sql.SQLException ex) {
+            LOG.error("RlsAspect: failed to emit SET LOCAL on connection {}", conn, ex);
+            throw new IllegalStateException("Failed to emit SET LOCAL app.current_tenant before query execution", ex);
+        } finally {
+            // No-op close.
             throw new IllegalStateException("Failed to emit SET LOCAL app.current_tenant before query execution", ex);
         } finally {
             // No-op close. DataSourceUtils manages the connection lifecycle
