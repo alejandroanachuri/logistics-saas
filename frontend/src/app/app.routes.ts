@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 
 import { authGuard } from './core/guards/auth-guard';
 import { teamAccessGuard } from './core/guards/team-access.guard';
+import { customerAccessGuard } from './core/guards/customer-access.guard';
 
 /**
  * F1 + gap-#5 + etapa-2-usuarios routes. Two top-level
@@ -99,6 +100,38 @@ export const routes: Routes = [
             path: ':id/edit',
             loadComponent: () =>
               import('./features/team/edit/team-edit').then((m) => m.TeamEditComponent),
+          },
+        ],
+      },
+      {
+        // etapa-3-envios / PR-6 — customer management feature
+        // (Chunk B: wire-up). The customerAccessGuard fires
+        // once at the `/auth/customers` parent level; unlike
+        // teamAccessGuard it does NOT require admin — operators
+        // and viewers can browse customers (they are
+        // operational data, not admin config).
+        path: 'customers',
+        canActivate: [customerAccessGuard],
+        children: [
+          {
+            path: '',
+            loadComponent: () =>
+              import('./features/customers/list/customer-list').then((m) => m.CustomerListComponent),
+          },
+          {
+            path: 'new',
+            loadComponent: () =>
+              import('./features/customers/create/customer-create').then((m) => m.CustomerCreateComponent),
+          },
+          {
+            path: ':id',
+            loadComponent: () =>
+              import('./features/customers/detail/customer-detail').then((m) => m.CustomerDetailComponent),
+          },
+          {
+            path: ':id/edit',
+            loadComponent: () =>
+              import('./features/customers/edit/customer-edit').then((m) => m.CustomerEditComponent),
           },
         ],
       },

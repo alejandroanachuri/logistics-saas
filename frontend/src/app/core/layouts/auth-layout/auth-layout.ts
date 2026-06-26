@@ -145,7 +145,20 @@ export class AuthLayoutComponent {
       // lands inside the shell without a flash.
       { label: 'Dashboard', icon: '◉', route: '/auth/dashboard' },
       { label: 'Envíos', icon: '➤', route: '/shipments', disabled: true, disabledHint: 'Próximamente' },
-      { label: 'Clientes', icon: '◐', route: '/customers', disabled: true, disabledHint: 'Próximamente' },
+      // etapa-3-envios / PR-6 Chunk B: the Clientes item is
+      // enabled here. AuthStore has no `currentUserIsOperator`
+      // computed yet, so the gate uses the same local-fallback
+      // pattern as Chunk A's per-page gate: ADMIN OR OPERATOR
+      // roles can see the link. VIEWER/DRIVER do not — they
+      // don't create or edit customers.
+      {
+        label: 'Clientes',
+        icon: '◐',
+        route: '/auth/customers',
+        visible: () =>
+          this.authStore.currentUserIsAdmin() ||
+          this.authStore.currentUserRoles().includes('COMPANY_OPERATOR'),
+      },
       { label: 'Reportes', icon: '◈', route: '/reports', disabled: true, disabledHint: 'Próximamente' },
       { label: 'Configuración', icon: '⚙', route: '/settings', disabled: true, disabledHint: 'Próximamente' },
     ];
