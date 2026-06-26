@@ -1,0 +1,108 @@
+<section data-testid="shipment-edit" class="space-y-6">
+  <header class="space-y-1">
+    <h1 class="text-2xl font-semibold text-on-surface">Editar envío</h1>
+    <p class="text-sm text-on-surface-variant">
+      Modificá las instrucciones de entrega, el tipo de pago y el modo de entrega. Solo disponible
+      para envíos en estado PRE_ALTA.
+    </p>
+  </header>
+
+  @if (shipment(); as s) {
+    @if (!isPreAlta()) {
+      <div
+        class="rounded-md border border-error-container bg-error-container p-4 text-sm text-on-error-container"
+        role="alert"
+        data-testid="error-not-pre-alta"
+      >
+        Este envío no se puede editar porque no está en estado PRE_ALTA.
+      </div>
+    }
+
+    <form
+      [formGroup]="form"
+      (ngSubmit)="onSubmitClick()"
+      class="max-w-xl space-y-5 rounded-md border border-outline-variant bg-surface-container-lowest p-6"
+      data-testid="shipment-edit-form"
+      novalidate
+    >
+      <label class="block space-y-1.5">
+        <span class="block text-sm font-medium text-on-surface">Instrucciones de entrega</span>
+        <textarea
+          rows="3"
+          formControlName="deliveryInstructions"
+          data-field="deliveryInstructions"
+          placeholder="Ej. Dejar en portería, timbre 3B"
+          class="block w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+        ></textarea>
+      </label>
+
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <label class="block space-y-1.5">
+          <span class="block text-sm font-medium text-on-surface">Tipo de pago</span>
+          <select
+            formControlName="paymentType"
+            data-field="paymentType"
+            class="block w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+          >
+            <option value="PAGO_ORIGEN">Pago en origen</option>
+            <option value="PAGO_DESTINO">Pago en destino</option>
+            <option value="CUENTA_CORRIENTE">Cuenta corriente</option>
+          </select>
+        </label>
+
+        <label class="block space-y-1.5">
+          <span class="block text-sm font-medium text-on-surface">Modo de entrega</span>
+          <select
+            formControlName="deliveryMode"
+            data-field="deliveryMode"
+            class="block w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+          >
+            <option value="DOMICILIO">Entrega a domicilio</option>
+            <option value="RETIRO_SUCURSAL">Retiro en sucursal</option>
+          </select>
+        </label>
+      </div>
+
+      <label class="block space-y-1.5">
+        <span class="block text-sm font-medium text-on-surface">Fecha prometida de entrega</span>
+        <input
+          type="date"
+          formControlName="promisedDeliveryDate"
+          data-field="promisedDeliveryDate"
+          class="block w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+      </label>
+
+      <!-- Error -->
+      @if (errorMessage(); as err) {
+        <p class="text-sm text-error" role="alert" data-testid="error">{{ err }}</p>
+      }
+
+      <!-- Footer -->
+      <div class="flex flex-wrap items-center justify-between gap-2 pt-2">
+        <button
+          type="button"
+          (click)="onCancel()"
+          data-testid="cancel-button"
+          class="inline-flex h-9 items-center rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-sm font-medium text-on-surface hover:bg-surface-container-low focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          [disabled]="form.invalid || !isPreAlta() || isSubmitting()"
+          data-testid="save-button"
+          class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-semibold text-on-primary hover:bg-primary-fixed-dim disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          @if (isSubmitting()) {
+            Guardando...
+          } @else {
+            Guardar cambios
+          }
+        </button>
+      </div>
+    </form>
+  } @else {
+    <p class="text-sm text-on-surface-variant" data-testid="loading">Cargando...</p>
+  }
+</section>

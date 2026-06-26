@@ -46,10 +46,11 @@ function titleForUrl(url: string): string {
   if (path.match(/^\/auth\/team\/[^/]+\/edit\/?$/)) return 'Editar usuario';
   if (path.match(/^\/auth\/team\/[^/]+\/?$/)) return 'Detalle del usuario';
   if (path === '/auth/team' || path.startsWith('/auth/team')) return 'Equipo';
-  // etapa-3-envios / PR-7 (Chunk A — list + detail only).
-  // The wizard and edit children land under separate routes
-  // added in Chunk B; once those land we will extend this
-  // branch with the matching titles.
+  // etapa-3-envios / PR-7 (Chunk A — list + detail, Chunk B
+  // — wizard + edit). The wizard route is checked BEFORE the
+  // edit regex so the `/new` suffix wins.
+  if (path === '/auth/shipments/new' || path.startsWith('/auth/shipments/new/')) return 'Nuevo envío';
+  if (path.match(/^\/auth\/shipments\/[^/]+\/edit\/?$/)) return 'Editar envío';
   if (path.match(/^\/auth\/shipments\/[^/]+\/?$/)) return 'Detalle del envío';
   if (path === '/auth/shipments' || path.startsWith('/auth/shipments')) return 'Envíos';
   if (path === '/auth/dashboard') return 'Dashboard';

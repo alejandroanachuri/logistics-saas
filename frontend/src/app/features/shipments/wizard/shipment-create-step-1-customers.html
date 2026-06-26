@@ -1,0 +1,128 @@
+<section data-testid="step-1-customers" class="space-y-4">
+  <header class="space-y-1">
+    <h1 class="text-2xl font-semibold text-on-surface">Seleccioná remitente y destinatario</h1>
+    <p class="text-sm text-on-surface-variant">
+      Buscá y elegí un cliente existente para cada lado del envío. No pueden ser el mismo cliente.
+    </p>
+  </header>
+
+  <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <!-- ============ SENDER PICKER ============ -->
+    <div
+      class="space-y-3 rounded-md border border-outline-variant bg-surface-container-lowest p-4"
+      data-testid="sender-picker"
+    >
+      <h2 class="text-base font-semibold text-on-surface">Remitente</h2>
+
+      @if (senderSelection(); as sel) {
+        <!-- Selected state -->
+        <div
+          class="space-y-1 rounded-md border border-tertiary-container bg-tertiary-container p-3"
+          data-testid="sender-selected"
+        >
+          <p class="text-sm font-medium text-on-tertiary-container">
+            {{ displayName(sel) }}
+          </p>
+          <p class="text-xs text-on-tertiary-container">DNI {{ displayDni(sel.dni) }}</p>
+          <button
+            type="button"
+            (click)="clearSelection('sender')"
+            data-testid="sender-change"
+            class="mt-1 inline-flex h-8 items-center rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-xs font-medium text-on-surface hover:bg-surface-container-low"
+          >
+            Cambiar
+          </button>
+        </div>
+      } @else {
+        <!-- Search state -->
+        <input
+          type="search"
+          (input)="onSenderSearchInput($any($event.target).value)"
+          placeholder="Buscar por nombre, razón social, email, DNI o CUIT"
+          data-testid="sender-search"
+          class="block w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+        @if (senderRows().length > 0) {
+          <ul
+            class="divide-y divide-outline-variant rounded-md border border-outline-variant"
+            data-testid="sender-results"
+          >
+            @for (row of senderRows(); track row.id) {
+              <li>
+                <button
+                  type="button"
+                  (click)="selectCustomer(row, 'sender')"
+                  [attr.data-testid]="'sender-result-' + row.id"
+                  class="block w-full px-3 py-2 text-left text-sm hover:bg-surface-container-low"
+                >
+                  <span class="font-medium text-on-surface">{{ displayName(row) }}</span>
+                  <span class="ml-2 text-xs text-on-surface-variant"
+                    >DNI {{ displayDni(row.dni) }}</span
+                  >
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      }
+    </div>
+
+    <!-- ============ RECEIVER PICKER ============ -->
+    <div
+      class="space-y-3 rounded-md border border-outline-variant bg-surface-container-lowest p-4"
+      data-testid="receiver-picker"
+    >
+      <h2 class="text-base font-semibold text-on-surface">Destinatario</h2>
+
+      @if (receiverSelection(); as sel) {
+        <div
+          class="space-y-1 rounded-md border border-tertiary-container bg-tertiary-container p-3"
+          data-testid="receiver-selected"
+        >
+          <p class="text-sm font-medium text-on-tertiary-container">
+            {{ displayName(sel) }}
+          </p>
+          <p class="text-xs text-on-tertiary-container">DNI {{ displayDni(sel.dni) }}</p>
+          <button
+            type="button"
+            (click)="clearSelection('receiver')"
+            data-testid="receiver-change"
+            class="mt-1 inline-flex h-8 items-center rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-xs font-medium text-on-surface hover:bg-surface-container-low"
+          >
+            Cambiar
+          </button>
+        </div>
+      } @else {
+        <input
+          type="search"
+          (input)="onReceiverSearchInput($any($event.target).value)"
+          placeholder="Buscar por nombre, razón social, email, DNI o CUIT"
+          data-testid="receiver-search"
+          class="block w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+        @if (receiverRows().length > 0) {
+          <ul
+            class="divide-y divide-outline-variant rounded-md border border-outline-variant"
+            data-testid="receiver-results"
+          >
+            @for (row of receiverRows(); track row.id) {
+              <li>
+                <button
+                  type="button"
+                  (click)="selectCustomer(row, 'receiver')"
+                  [attr.data-testid]="'receiver-result-' + row.id"
+                  class="block w-full px-3 py-2 text-left text-sm hover:bg-surface-container-low"
+                >
+                  <span class="font-medium text-on-surface">{{ displayName(row) }}</span>
+                  <span class="ml-2 text-xs text-on-surface-variant"
+                    >DNI {{ displayDni(row.dni) }}</span
+                  >
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      }
+    </div>
+  </div>
+</section>

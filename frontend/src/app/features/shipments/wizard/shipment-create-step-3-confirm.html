@@ -1,0 +1,152 @@
+<section data-testid="step-3-confirm" class="space-y-6">
+  <header class="space-y-1">
+    <h1 class="text-2xl font-semibold text-on-surface">Confirmá y creá el envío</h1>
+    <p class="text-sm text-on-surface-variant">
+      Revisá los datos del envío. Agregá las instrucciones de entrega y, opcionalmente, pedí que se
+      valide en el momento.
+    </p>
+  </header>
+
+  <!-- Summary: sender + receiver -->
+  <div
+    class="grid grid-cols-1 gap-4 rounded-md border border-outline-variant bg-surface-container-lowest p-4 md:grid-cols-2"
+    data-testid="summary-participants"
+  >
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">Remitente</p>
+      @if (sender(); as s) {
+        <p class="mt-1 text-sm font-medium text-on-surface" data-testid="summary-sender">
+          {{ displayName(s) }}
+        </p>
+      }
+    </div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+        Destinatario
+      </p>
+      @if (receiver(); as r) {
+        <p class="mt-1 text-sm font-medium text-on-surface" data-testid="summary-receiver">
+          {{ displayName(r) }}
+        </p>
+      }
+    </div>
+  </div>
+
+  <!-- Summary: package count + total weight -->
+  <div
+    class="grid grid-cols-1 gap-4 rounded-md border border-outline-variant bg-surface-container-lowest p-4 md:grid-cols-3"
+    data-testid="summary-totals"
+  >
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">Paquetes</p>
+      <p class="mt-1 text-2xl font-semibold text-on-surface" data-testid="summary-package-count">
+        {{ packages().length }}
+      </p>
+    </div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+        Peso total (kg)
+      </p>
+      <p class="mt-1 text-2xl font-semibold text-on-surface" data-testid="summary-total-weight">
+        {{ totalWeight() }}
+      </p>
+    </div>
+  </div>
+
+  <!-- Per-package table -->
+  @if (packages().length > 0) {
+    <div
+      class="overflow-x-auto rounded-md border border-outline-variant bg-surface-container-lowest p-4"
+      data-testid="summary-package-table"
+    >
+      <table class="w-full text-sm">
+        <thead class="text-on-surface-variant">
+          <tr>
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide">#</th>
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide">
+              Contenido
+            </th>
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide">
+              Categoría
+            </th>
+            <th class="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide">
+              Peso (kg)
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (pkg of packages(); track $index) {
+            <tr
+              class="border-t border-outline-variant"
+              [attr.data-testid]="'summary-pkg-' + $index"
+            >
+              <td class="px-3 py-2 text-on-surface-variant">{{ $index + 1 }}</td>
+              <td class="px-3 py-2 text-on-surface">{{ pkg.contentDescription }}</td>
+              <td class="px-3 py-2 text-on-surface-variant">{{ displayCategory(pkg.category) }}</td>
+              <td class="px-3 py-2 text-right text-on-surface">{{ pkg.weightKg }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- Optional fields -->
+  <div
+    class="space-y-4 rounded-md border border-outline-variant bg-surface-container-lowest p-4"
+    data-testid="optional-fields"
+  >
+    <h2 class="text-base font-semibold text-on-surface">Datos opcionales</h2>
+
+    <label class="block space-y-1.5">
+      <span class="block text-sm font-medium text-on-surface">
+        ID de dirección de entrega <span class="text-error" aria-hidden="true">*</span>
+      </span>
+      <input
+        type="text"
+        [value]="deliveryAddressId()"
+        (input)="deliveryAddressId.set($any($event.target).value)"
+        data-testid="input-delivery-address-id"
+        placeholder="addr-..."
+        class="block w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+      />
+      <span class="block text-xs text-on-surface-variant">
+        Requerido por el backend. En una próxima iteración se reemplaza por un selector de
+        direcciones.
+      </span>
+    </label>
+
+    <label class="block space-y-1.5">
+      <span class="block text-sm font-medium text-on-surface">Instrucciones de entrega</span>
+      <textarea
+        rows="2"
+        [value]="deliveryInstructions()"
+        (input)="deliveryInstructions.set($any($event.target).value)"
+        data-testid="input-delivery-instructions"
+        placeholder="Ej. Dejar en portería, timbre 3B"
+        class="block w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+      ></textarea>
+    </label>
+
+    <label class="block space-y-1.5">
+      <span class="block text-sm font-medium text-on-surface">Fecha prometida de entrega</span>
+      <input
+        type="date"
+        [value]="promisedDeliveryDate()"
+        (input)="promisedDeliveryDate.set($any($event.target).value)"
+        data-testid="input-promised-date"
+        class="block w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+      />
+    </label>
+
+    <label class="inline-flex items-center gap-2 text-sm text-on-surface">
+      <input
+        type="checkbox"
+        [checked]="validateNow()"
+        (change)="validateNow.set($any($event.target).checked)"
+        data-testid="input-validate-now"
+      />
+      <span>Validar inmediatamente (en lugar de dejar en PRE_ALTA)</span>
+    </label>
+  </div>
+</section>

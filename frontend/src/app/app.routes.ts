@@ -137,14 +137,12 @@ export const routes: Routes = [
         ],
       },
       {
-        // etapa-3-envios / PR-7 (Chunk A — list + detail only).
-        // The shipmentAccessGuard fires once at the
-        // `/auth/shipments` parent level; unlike teamAccessGuard
-        // it does NOT require admin — shipments are the core
-        // operational entity and operators must be able to
-        // browse + manage them. The list + detail children
-        // are wired here; the create wizard + edit page are
-        // registered in PR-7 Chunk B.
+        // etapa-3-envios / PR-7 (Chunk A — list + detail,
+        // Chunk B — wizard + edit). The shipmentAccessGuard
+        // fires once at the `/auth/shipments` parent level;
+        // unlike teamAccessGuard it does NOT require admin —
+        // shipments are the core operational entity and
+        // operators must be able to browse + manage them.
         path: 'shipments',
         canActivate: [shipmentAccessGuard],
         children: [
@@ -154,9 +152,27 @@ export const routes: Routes = [
               import('./features/shipments/list/shipment-list').then((m) => m.ShipmentListComponent),
           },
           {
+            // etapa-3-envios / PR-7 Chunk B — the create
+            // wizard. Lazy-loaded so the list + detail
+            // bundles stay small.
+            path: 'new',
+            loadComponent: () =>
+              import('./features/shipments/wizard/shipment-create').then((m) => m.ShipmentCreateComponent),
+          },
+          {
             path: ':id',
             loadComponent: () =>
               import('./features/shipments/detail/shipment-detail').then((m) => m.ShipmentDetailComponent),
+          },
+          {
+            // etapa-3-envios / PR-7 Chunk B — the edit page.
+            // Only valid when the shipment is in PRE_ALTA
+            // (enforced by the backend and surfaced via an
+            // inline error banner on the page when the user
+            // hits it from a non-editable state).
+            path: ':id/edit',
+            loadComponent: () =>
+              import('./features/shipments/edit/shipment-edit').then((m) => m.ShipmentEditComponent),
           },
         ],
       },
