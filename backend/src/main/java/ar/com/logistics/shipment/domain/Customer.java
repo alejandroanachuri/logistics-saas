@@ -1,5 +1,7 @@
 package ar.com.logistics.shipment.domain;
 
+import ar.com.logistics.common.jsonview.Views;
+import com.fasterxml.jackson.annotation.JsonView;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -58,9 +60,11 @@ public class Customer {
     private String razonSocial;
 
     @Column(name = "dni", length = 8)
+    @JsonView(Views.Default.class)
     private String dni;
 
     @Column(name = "cuit_cuil", length = 11)
+    @JsonView(Views.Default.class)
     private String cuitCuil;
 
     @Column(name = "tax_condition", length = 30, nullable = false)
