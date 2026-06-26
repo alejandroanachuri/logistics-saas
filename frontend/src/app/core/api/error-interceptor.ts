@@ -28,8 +28,15 @@ const NO_RETRY_PATHS = [
  * session in PR7; v1 of the client never sends platform
  * cookies to a company path, so a 401 here is treated as a
  * real auth failure (not a refreshable one).
+ *
+ * <p>Added in etapa-3-envios PR-5: the {@code /api/v1/public/}
+ * prefix is also a no-retry prefix. The public tracking portal
+ * is unauthenticated — a 401 here means the endpoint is
+ * misrouted behind the auth filter, NOT a refreshable session
+ * failure. Retrying would force-logout a perfectly valid
+ * anonymous visitor.
  */
-const NO_RETRY_PREFIXES = ['/api/v1/platform/'];
+const NO_RETRY_PREFIXES = ['/api/v1/platform/', '/api/v1/public/'];
 
 /**
  * Canonical Spanish copy for the user-facing error envelope.
@@ -58,6 +65,31 @@ const CODE_TO_COPY: Record<string, string> = {
   SELF_DISABLE_BLOCKED: 'No podés deshabilitar tu propio usuario',
   FIRST_ADMIN_PROTECTED: 'El primer administrador está protegido',
   LAST_ADMIN_PROTECTED: 'La empresa debe tener al menos un administrador activo',
+  // etapa-3-envios PR-5 — shipment / customer / address /
+  // branch / service-level error codes. Surfaced so the
+  // /customers/*, /shipments/*, and /public/track pages can
+  // render canonical Spanish copy on failure without
+  // translating the envelope code by hand. Codes mirror the
+  // backend's `ErrorCode.java` (PR-2/3) and the
+  // `GlobalExceptionHandler` mapping (PR-3).
+  INVALID_STATE_TRANSITION: 'No se puede cambiar el estado del paquete.',
+  DUPLICATE_EVENT: 'Este evento ya fue registrado.',
+  INSUFFICIENT_PERMISSIONS: 'No tenés permiso para realizar esta acción.',
+  SENDER_EQUALS_RECEIVER: 'El remitente y el destinatario deben ser distintos.',
+  DNI_INVALID: 'El DNI debe tener 7 u 8 dígitos.',
+  CUIT_INVALID: 'El CUIT ingresado es incorrecto.',
+  DNI_ALREADY_EXISTS: 'Ya existe un cliente con este DNI en tu empresa.',
+  CUIT_ALREADY_EXISTS: 'Ya existe un cliente con este CUIT en tu empresa.',
+  CUSTOMER_NOT_FOUND: 'El cliente solicitado no existe.',
+  ADDRESS_NOT_FOUND: 'La dirección solicitada no existe.',
+  PACKAGE_NOT_FOUND: 'El paquete solicitado no existe.',
+  SHIPMENT_NOT_FOUND: 'El envío solicitado no existe.',
+  BRANCH_NOT_FOUND: 'La sucursal solicitada no existe.',
+  SERVICE_LEVEL_NOT_FOUND: 'El nivel de servicio solicitado no existe.',
+  COMPANY_SUSPENDED: 'Tu empresa está suspendida y no puede crear envíos.',
+  EVENT_VALIDATION_ERROR: 'Faltan campos obligatorios en el evento.',
+  NO_DATA_CONSENT: 'Se requiere consentimiento del titular para usar sus datos.',
+  TRACKING_NOT_FOUND: 'No encontramos un envío con ese código.',
 };
 
 const NETWORK_ERROR = {
