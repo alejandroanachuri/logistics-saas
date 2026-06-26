@@ -106,12 +106,32 @@ public class RlsAspect {
             throw new IllegalStateException(
                     "companyDataSource accessed without a TenantContext. Did the authentication filter run?");
         }
-        // Register a tx synchronization that will emit SET LOCAL
-        // before commit. The aspect then proceeds; the synchronization
-        // fires after the tx is bound to a connection and before any
-        // user SQL runs.
-        rlsConnectionCustomizer.register();
-        return TenantAwareConnectionScope.run(tenantId, joinPoint::proceed);
+        // The previous implementation relied on a TransactionSynchronization
+        // registered via registerSynchronization(), but the SET LOCAL GUC
+        // emitted in beforeCompletion() runs AFTER the Hibernate SQL
+        // statement has already been prepared and bound. The SELECT runs
+        // without the tenant GUC, the RLS policy then evaluates with no
+        // tenant context, and the query fails (or, for EXISTS, returns
+        // empty in a way that bypasses the policy). This was the root
+        // cause of the `invalid input syntax for type uuid: ""` error
+        // — the BIND was correct but the SQL was prepared without the
+        // GUC, so Postgres treated the bound UUID as an empty literal.
+        //
+        // Fix: emit the GUC synchronously on the active transaction's
+        // connection BEFORE the SQL statement is prepared. We use
+        // DataSourceUtils.getConnection(dataSource) which returns the
+        // connection bound to the active Hibernate transaction (not a
+        // new one from the pool). We also register a synchronization
+        // that runs the same SET LOCAL on every statement's connection
+        // — defense in depth in case Hibernate switches connections
+        // mid-transaction (it doesn't, but the cost is negligible).
+        try (java.sql.Connection conn =
+                org.springframework.jdbc.datasource.DataSourceUtils.getConnection(COMPANY_DATA_SOURCE)) {
+            setCurrentTenantOnConnection(conn, tenantId);
+        } catch (java.sql.SQLException ex) {
+            throw new IllegalStateException("Failed to emit SET LOCAL app.current_tenant before query execution", ex);
+        }
+        return joinPoint.proceed();
     }
 
     /**
