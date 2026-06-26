@@ -108,6 +108,10 @@ app:
     register-per-hour: 5
     login-per-minute: 10
     availability-per-minute: 30
+    # Public tracking portal (PRD etapa-3 §9.1) — unauthenticated
+    # per-IP bucket so scrapers can't burn the tenant budget. Tuned
+    # for "customer pastes lgstid from email" usage.
+    public-track-per-hour: 30
 
   lockout:
     max-failed-attempts: 5

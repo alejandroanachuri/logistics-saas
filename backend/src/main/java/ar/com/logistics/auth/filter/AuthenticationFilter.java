@@ -80,6 +80,18 @@ public class AuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
             throws ServletException, IOException {
+        // Public routes skip auth entirely (PRD etapa-3 §9.1).
+        // No cookie parsing, no TenantContext binding, no
+        // SecurityContext setup — these endpoints are intentionally
+        // unauthenticated and the downstream controller decides how
+        // to enforce access (typically via the systemDataSource
+        // BYPASSRLS pool for cross-tenant lookup).
+        String requestPath = req.getRequestURI();
+        if (requestPath != null && requestPath.startsWith("/api/v1/public/")) {
+            chain.doFilter(req, res);
+            return;
+        }
+
         String rawCookie = extractAccessTokenCookie(req);
         if (rawCookie == null || rawCookie.isBlank()) {
             // No cookie — leave the context empty. The
