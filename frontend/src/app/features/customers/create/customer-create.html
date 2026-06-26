@@ -1,0 +1,44 @@
+<section data-testid="customer-create" class="space-y-6">
+  <header class="space-y-1">
+    <h1 class="text-2xl font-semibold text-on-surface">Nuevo cliente</h1>
+    <p class="text-sm text-on-surface-variant">
+      Sumá un nuevo cliente a tu empresa. La dirección se carga después desde
+      el detalle del cliente.
+    </p>
+  </header>
+
+  <div
+    class="max-w-xl space-y-5 rounded-md border border-outline-variant bg-surface-container-lowest p-6"
+    data-testid="customer-create-form"
+  >
+    <h2 class="text-lg font-semibold text-on-surface">Datos personales</h2>
+    <p class="text-xs text-on-surface-variant">
+      Seleccioná el tipo de persona. Los campos DNI / CUIT son obligatorios
+      según corresponda. El consentimiento de datos es obligatorio (Ley 25.326).
+    </p>
+
+    <app-customer-form (submit)="onSubmit($event)" />
+
+    <!-- Error + footer -->
+    @if (errorMessage(); as err) {
+      <p class="text-sm text-error" role="alert" data-testid="error">{{ err }}</p>
+    }
+
+    <div class="flex flex-wrap items-center justify-between gap-2 pt-2">
+      <a
+        routerLink="/auth/customers"
+        data-testid="cancel-link"
+        class="inline-flex h-9 items-center rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-sm font-medium text-on-surface hover:bg-surface-container-low focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      >
+        Cancelar
+      </a>
+      <p class="text-xs text-on-surface-variant">
+        @if (isSubmitting()) {
+          Creando...
+        } @else {
+          Usá el botón Guardar del formulario para crear el cliente.
+        }
+      </p>
+    </div>
+  </div>
+</section>
