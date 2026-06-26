@@ -47,12 +47,21 @@ public class JsonViewResponseAdvice implements ResponseBodyAdvice<Object> {
      */
     private static final Set<String> FULL_VISIBILITY_ROLES = Set.of("COMPANY_ADMIN", "COMPANY_OPERATOR");
 
+    /**
+     * View filter is a no-op for body types that don't carry any
+     * {@code @JsonView}-annotated fields. LoginResponse, MeResponse,
+     * ErrorEnvelope, etc. are plain DTOs without per-role fields —
+     * wrapping them in {@code MappingJacksonValue} would change
+     * the wire format from {@code {user: {...}}} to
+     * {@code {value: {...}, filters: null, serializationView: ...}}
+     * which breaks the frontend's expectations.
+     */
     @Override
     public boolean supports(MethodParameter returnType, Class<? extends HttpMessageConverter<?>> converterType) {
-        // Apply to all responses; the wrapping is cheap (a single object
-        // allocation) and ensures consistent field-level security across
-        // every endpoint that returns JSON.
-        return true;
+        // Apply only to types that actually use @JsonView. As of PR-4
+        // those are: Customer (and only Customer). For new entities
+        // added in later PRs, add their types to the set.
+        return JsonViewResponseAdvice.hasSensitiveFields(returnType.getParameterType());
     }
 
     @Override
@@ -67,6 +76,29 @@ public class JsonViewResponseAdvice implements ResponseBodyAdvice<Object> {
         MappingJacksonValue wrapped = new MappingJacksonValue(body);
         wrapped.setSerializationView(viewClass);
         return wrapped;
+    }
+
+    /**
+     * The set of body types whose fields carry {@code @JsonView(...)}
+     * annotations. The advice wraps these in {@link MappingJacksonValue}
+     * to apply the per-role view filter. Other types pass through
+     * unwrapped (plain JSON), so the wire format stays clean for
+     * {@code LoginResponse}, {@code MeResponse}, {@code ErrorEnvelope},
+     * etc.
+     */
+    private static final Set<Class<?>> SENSITIVE_BODY_TYPES = Set.of(
+            ar.com.logistics.shipment.domain.Customer.class
+            // Add new domain types here as @JsonView usage spreads.
+            );
+
+    private static boolean hasSensitiveFields(Class<?> type) {
+        if (type == null) return false;
+        Class<?> current = type;
+        while (current != null && current != Object.class) {
+            if (SENSITIVE_BODY_TYPES.contains(current)) return true;
+            current = current.getSuperclass();
+        }
+        return false;
     }
 
     /**
