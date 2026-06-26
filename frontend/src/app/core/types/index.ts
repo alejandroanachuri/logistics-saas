@@ -6,3 +6,12 @@ export * from './availability';
 export * from './customer';
 export * from './shipment';
 export * from './public-track';
+// etapa-3-envios PR-5 (Chunk B Part 1 — services + stores):
+// shipment-detail summary + detail projections (the controller
+// enriches with FK refs + packages + latestEvent); address
+// wire types for the addresses service; branch + service-level
+// catalog projections.
+export * from './shipment-detail';
+export * from './address';
+export * from './branch';
+export * from './service-level';
