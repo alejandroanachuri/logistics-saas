@@ -202,8 +202,26 @@ public class CompanyUsersService {
         // Fetch all active users in the tenant via findAll (tenant
         // filter comes from RLS). v1: bound by page size + filter.
         List<CompanyUser> rows = userRepository.findAll();
+        org.slf4j.LoggerFactory.getLogger(CompanyUsersService.class)
+                .info(
+                        "[DEBUG-SERVICE] list() rows.size={}, tenantId={}, status={}, search={}",
+                        rows.size(),
+                        tenantId,
+                        filters.status(),
+                        filters.search());
         List<CompanyUserSummary> filtered = new ArrayList<>();
         for (CompanyUser u : rows) {
+            org.slf4j.LoggerFactory.getLogger(CompanyUsersService.class)
+                    .info("[DEBUG-SERVICE] processing user id={}, tenant_id={}", u.getId(), u.getTenantId());
+            if (u.getTenantId() != null && !u.getTenantId().equals(tenantId)) {
+                org.slf4j.LoggerFactory.getLogger(CompanyUsersService.class)
+                        .info(
+                                "[DEBUG-SERVICE] FILTERED OUT user id={} by tenantId check (u.tenantId={}, filter.tenantId={})",
+                                u.getId(),
+                                u.getTenantId(),
+                                tenantId);
+                continue;
+            }
             if (u.getTenantId() != null && !u.getTenantId().equals(tenantId)) {
                 continue;
             }
