@@ -99,6 +99,18 @@ public class RlsAspect {
         if (!rlsEnabled) {
             return joinPoint.proceed();
         }
+        // Skip system and platform repos — they use a different
+        // DataSource (BYPASSRLS for system, cross-tenant for platform)
+        // and don't need the app.current_tenant GUC. Without this
+        // early-return, the broader pointcut (which now matches
+        // every JpaRepository method) would attempt to emit the GUC
+        // on connections that are NOT the company pool, and the
+        // TenantContext would be unset for the login flow (which
+        // can't set it because it needs the system pool to look up
+        // the user first).
+        if (!DataSourceContext.isCompany()) {
+            return joinPoint.proceed();
+        }
         UUID tenantId = TenantContext.currentTenantId();
         if (tenantId == null) {
             // No tenant in the request thread — refuse rather than
