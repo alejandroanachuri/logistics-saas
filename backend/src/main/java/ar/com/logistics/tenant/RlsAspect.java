@@ -148,9 +148,21 @@ public class RlsAspect {
         java.sql.Connection conn = null;
         try {
             conn = org.springframework.jdbc.datasource.DataSourceUtils.getConnection(COMPANY_DATA_SOURCE);
-            LOG.info("RlsAspect: got connection {}, emitting SET LOCAL tenant={}", conn, tenantId);
             setCurrentTenantOnConnection(conn, tenantId);
-            LOG.info("RlsAspect: SET LOCAL emitted successfully on connection {}", conn);
+            // Verify the GUC was actually set (Postgres SET LOCAL is
+            // transactional, so a wrong connection would leave it
+            // unset on the executing connection).
+            try (var stmt = conn.createStatement();
+                    var rs = stmt.executeQuery("SELECT current_setting('app.current_tenant', true)")) {
+                if (rs.next()) {
+                    String guc = rs.getString(1);
+                    LOG.info(
+                            "RlsAspect: SET LOCAL tenant={} verified; connection={}; guc_on_connection={}",
+                            tenantId,
+                            conn,
+                            guc);
+                }
+            }
         } catch (java.sql.SQLException ex) {
             LOG.error("RlsAspect: failed to emit SET LOCAL on connection {}", conn, ex);
             throw new IllegalStateException("Failed to emit SET LOCAL app.current_tenant before query execution", ex);
