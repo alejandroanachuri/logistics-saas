@@ -142,9 +142,6 @@ public class RlsAspect {
             LOG.error("RlsAspect: failed to emit SET LOCAL on connection {}", conn, ex);
             throw new IllegalStateException("Failed to emit SET LOCAL app.current_tenant before query execution", ex);
         } finally {
-            // No-op close.
-            throw new IllegalStateException("Failed to emit SET LOCAL app.current_tenant before query execution", ex);
-        } finally {
             // No-op close. DataSourceUtils manages the connection lifecycle
             // via the active transaction. We MUST NOT call conn.close()
             // here — that would close the connection BEFORE Hibernate has
