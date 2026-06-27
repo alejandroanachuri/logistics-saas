@@ -183,7 +183,10 @@ public class CompanyUsersController {
     // -------------------------------------------------------------------
 
     private static UUID currentTenantId() {
-        return TenantContext.currentTenantId();
+        UUID tid = TenantContext.currentTenantId();
+        org.slf4j.LoggerFactory.getLogger(CompanyUsersController.class)
+                .info("[DEBUG-CONTROLLER] currentTenantId() returned {}", tid);
+        return tid;
     }
 
     /**
