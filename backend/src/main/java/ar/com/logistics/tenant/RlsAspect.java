@@ -93,7 +93,8 @@ public class RlsAspect {
      */
     @Around("execution(* ar.com.logistics.tenant.repository..*(..)) "
             + "|| execution(* ar.com.logistics.auth.repository.company..*(..)) "
-            + "|| execution(* ar.com.logistics.shipment.repository..*(..))")
+            + "|| execution(* ar.com.logistics.shipment.repository..*(..)) "
+            + "|| execution(* org.springframework.data.jpa.repository.JpaRepository+.*(..))")
     public Object emitCurrentTenant(ProceedingJoinPoint joinPoint) throws Throwable {
         if (!rlsEnabled) {
             return joinPoint.proceed();
