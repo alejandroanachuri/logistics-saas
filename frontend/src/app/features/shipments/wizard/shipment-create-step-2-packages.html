@@ -1,0 +1,42 @@
+<section data-testid="step-2-packages" class="space-y-4">
+  <header class="space-y-1">
+    <h1 class="text-2xl font-semibold text-on-surface">Cargá los paquetes</h1>
+    <p class="text-sm text-on-surface-variant">
+      Agregá uno o más paquetes. Cada paquete debe tener peso mayor a 0 y una descripción del
+      contenido.
+    </p>
+  </header>
+
+  <ol class="space-y-4" data-testid="package-list">
+    @for (pkg of packages(); track $index) {
+      <li
+        class="space-y-3 rounded-md border border-outline-variant bg-surface-container-lowest p-4"
+        [attr.data-testid]="'package-slot-' + $index"
+      >
+        <header class="flex items-center justify-between">
+          <h2 class="text-base font-semibold text-on-surface">Paquete {{ $index + 1 }}</h2>
+          @if (packages().length > 1) {
+            <button
+              type="button"
+              (click)="removePackage($index)"
+              [attr.data-testid]="'remove-package-' + $index"
+              class="inline-flex h-8 items-center rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-xs font-medium text-on-surface hover:bg-surface-container-low"
+            >
+              Quitar
+            </button>
+          }
+        </header>
+        <app-package-form (submit)="updatePackage($index, $event)" />
+      </li>
+    }
+  </ol>
+
+  <button
+    type="button"
+    (click)="addPackage()"
+    data-testid="add-package"
+    class="inline-flex h-10 items-center rounded-md border border-outline-variant bg-surface-container-lowest px-4 text-sm font-medium text-on-surface hover:bg-surface-container-low"
+  >
+    + Agregar otro paquete
+  </button>
+</section>

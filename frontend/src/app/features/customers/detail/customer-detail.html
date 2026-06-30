@@ -1,0 +1,123 @@
+<section data-testid="customer-detail" class="space-y-6">
+  <!-- Back link -->
+  <div>
+    <a
+      routerLink="/auth/customers"
+      class="inline-flex items-center text-sm font-medium text-primary hover:underline"
+      data-testid="back-link"
+    >
+      ← Volver a clientes
+    </a>
+  </div>
+
+  <!-- Header: name + person type -->
+  <header class="flex flex-wrap items-start justify-between gap-3">
+    <div class="space-y-2">
+      <h1 class="text-2xl font-semibold text-on-surface" data-testid="customer-name">
+        {{ displayName(customer()) }}
+      </h1>
+      <p class="text-sm text-on-surface-variant">{{ displayPersonType(customer()) }}</p>
+    </div>
+  </header>
+
+  <!-- Body -->
+  @if (customer(); as c) {
+    <dl class="grid grid-cols-1 gap-x-6 gap-y-3 rounded-md border border-outline-variant bg-surface-container-lowest p-6 md:grid-cols-2">
+      <div class="space-y-1">
+        <dt class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">Nombre</dt>
+        <dd class="text-sm text-on-surface">{{ c.firstName ?? '—' }}</dd>
+      </div>
+      <div class="space-y-1">
+        <dt class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">Apellido</dt>
+        <dd class="text-sm text-on-surface">{{ c.lastName ?? '—' }}</dd>
+      </div>
+      @if (c.razonSocial) {
+        <div class="space-y-1 md:col-span-2">
+          <dt class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">Razón social</dt>
+          <dd class="text-sm text-on-surface">{{ c.razonSocial }}</dd>
+        </div>
+      }
+      <div class="space-y-1">
+        <dt class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">DNI</dt>
+        <dd class="text-sm text-on-surface">{{ displayDni(c.dni) }}</dd>
+      </div>
+      <div class="space-y-1">
+        <dt class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">CUIT / CUIL</dt>
+        <dd class="text-sm text-on-surface">{{ displayCuit(c.cuitCuil) }}</dd>
+      </div>
+      <div class="space-y-1">
+        <dt class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">Condición frente al IVA</dt>
+        <dd class="text-sm text-on-surface">{{ displayTaxCondition(c.taxCondition) }}</dd>
+      </div>
+      <div class="space-y-1">
+        <dt class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">Teléfono</dt>
+        <dd class="text-sm text-on-surface">{{ c.phone }}</dd>
+      </div>
+      <div class="space-y-1">
+        <dt class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">Email</dt>
+        <dd class="text-sm text-on-surface">{{ c.email ?? '—' }}</dd>
+      </div>
+      <div class="space-y-1">
+        <dt class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">Consentimiento de datos</dt>
+        <dd class="text-sm text-on-surface">{{ consentLabel(c) }}</dd>
+      </div>
+      <div class="space-y-1">
+        <dt class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">Creado</dt>
+        <dd class="text-sm text-on-surface">{{ formatDate(c.createdAt) }}</dd>
+      </div>
+      @if (c.updatedAt) {
+        <div class="space-y-1">
+          <dt class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">Actualizado</dt>
+          <dd class="text-sm text-on-surface">{{ formatDate(c.updatedAt) }}</dd>
+        </div>
+      }
+    </dl>
+
+    <!-- Actions -->
+    <div class="flex flex-wrap items-center justify-end gap-2">
+      <button
+        type="button"
+        (click)="editInfo()"
+        [disabled]="!canEdit()"
+        data-testid="edit-info-button"
+        class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-on-primary hover:bg-primary-fixed-dim focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        Editar información
+      </button>
+      @if (canDisable()) {
+        <button
+          type="button"
+          (click)="showDisableConfirm.set(true)"
+          data-testid="disable-customer-button"
+          [title]="!authStore.currentUserIsAdmin() ? 'Solo los administradores pueden desactivar clientes' : ''"
+          class="inline-flex h-10 items-center justify-center rounded-md bg-error px-4 text-sm font-semibold text-on-error hover:bg-error/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Desactivar
+        </button>
+      }
+    </div>
+  }
+
+  <!-- Loading state -->
+  @if (isLoading()) {
+    <p class="text-sm text-on-surface-variant" data-testid="loading">Cargando...</p>
+  }
+
+  <!-- Error state -->
+  @if (errorMessage(); as msg) {
+    <p class="text-sm text-error" data-testid="error" role="alert">{{ msg }}</p>
+  }
+
+  <!-- Disable confirm -->
+  @if (showDisableConfirm() && customer(); as c) {
+    <app-confirm-dialog
+      title="Desactivar cliente"
+      [message]="'¿Desactivar a ' + displayName(c) + '? No podrá ser usado en nuevos envíos hasta que lo reactives.'"
+      confirmLabel="Desactivar"
+      cancelLabel="Cancelar"
+      [destructive]="true"
+      (confirm)="disable()"
+      (cancel)="showDisableConfirm.set(false)"
+    />
+  }
+</section>

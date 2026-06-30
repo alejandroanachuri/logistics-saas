@@ -2,6 +2,8 @@ import { Routes } from '@angular/router';
 
 import { authGuard } from './core/guards/auth-guard';
 import { teamAccessGuard } from './core/guards/team-access.guard';
+import { customerAccessGuard } from './core/guards/customer-access.guard';
+import { shipmentAccessGuard } from './core/guards/shipment-access.guard';
 
 /**
  * F1 + gap-#5 + etapa-2-usuarios routes. Two top-level
@@ -35,8 +37,7 @@ export const routes: Routes = [
   },
   {
     path: 'login',
-    loadComponent: () =>
-      import('./features/login/login').then((m) => m.LoginComponent),
+    loadComponent: () => import('./features/login/login').then((m) => m.LoginComponent),
   },
   {
     path: 'register',
@@ -45,13 +46,31 @@ export const routes: Routes = [
   },
   {
     path: 'terms',
-    loadComponent: () =>
-      import('./features/terms/terms').then((m) => m.TermsComponent),
+    loadComponent: () => import('./features/terms/terms').then((m) => m.TermsComponent),
   },
   {
     path: 'privacy',
+    loadComponent: () => import('./features/privacy/privacy').then((m) => m.PrivacyComponent),
+  },
+  {
+    // etapa-3-envios / PR-7 (Chunk C — public portal
+    // frontend). The customer-facing tracking page at
+    // `/track/:lgstid`. Public: NO `canActivate` and NO
+    // `authGuard` — anonymous visitors are the whole point.
+    // The {@code PublicTrackLayoutComponent} acts as the
+    // layout wrapper (brand header + outlet + footer); the
+    // leaf `PublicTrackComponent` reads the `:lgstid` route
+    // param via `withComponentInputBinding()`.
+    path: 'track',
     loadComponent: () =>
-      import('./features/privacy/privacy').then((m) => m.PrivacyComponent),
+      import('./shared/ui/public-track-layout').then((m) => m.PublicTrackLayoutComponent),
+    children: [
+      {
+        path: ':lgstid',
+        loadComponent: () =>
+          import('./features/track/public-track').then((m) => m.PublicTrackComponent),
+      },
+    ],
   },
   {
     // etapa-2-usuarios refactor-1: the authenticated shell
@@ -67,9 +86,7 @@ export const routes: Routes = [
       {
         path: 'dashboard',
         loadComponent: () =>
-          import('./features/dashboard/dashboard').then(
-            (m) => m.DashboardComponent,
-          ),
+          import('./features/dashboard/dashboard').then((m) => m.DashboardComponent),
       },
       {
         // etapa-2-usuarios / PR-5 — team management feature.
@@ -99,6 +116,94 @@ export const routes: Routes = [
             path: ':id/edit',
             loadComponent: () =>
               import('./features/team/edit/team-edit').then((m) => m.TeamEditComponent),
+          },
+        ],
+      },
+      {
+        // etapa-3-envios / PR-6 — customer management feature
+        // (Chunk B: wire-up). The customerAccessGuard fires
+        // once at the `/auth/customers` parent level; unlike
+        // teamAccessGuard it does NOT require admin — operators
+        // and viewers can browse customers (they are
+        // operational data, not admin config).
+        path: 'customers',
+        canActivate: [customerAccessGuard],
+        children: [
+          {
+            path: '',
+            loadComponent: () =>
+              import('./features/customers/list/customer-list').then(
+                (m) => m.CustomerListComponent,
+              ),
+          },
+          {
+            path: 'new',
+            loadComponent: () =>
+              import('./features/customers/create/customer-create').then(
+                (m) => m.CustomerCreateComponent,
+              ),
+          },
+          {
+            path: ':id',
+            loadComponent: () =>
+              import('./features/customers/detail/customer-detail').then(
+                (m) => m.CustomerDetailComponent,
+              ),
+          },
+          {
+            path: ':id/edit',
+            loadComponent: () =>
+              import('./features/customers/edit/customer-edit').then(
+                (m) => m.CustomerEditComponent,
+              ),
+          },
+        ],
+      },
+      {
+        // etapa-3-envios / PR-7 (Chunk A — list + detail,
+        // Chunk B — wizard + edit). The shipmentAccessGuard
+        // fires once at the `/auth/shipments` parent level;
+        // unlike teamAccessGuard it does NOT require admin —
+        // shipments are the core operational entity and
+        // operators must be able to browse + manage them.
+        path: 'shipments',
+        canActivate: [shipmentAccessGuard],
+        children: [
+          {
+            path: '',
+            loadComponent: () =>
+              import('./features/shipments/list/shipment-list').then(
+                (m) => m.ShipmentListComponent,
+              ),
+          },
+          {
+            // etapa-3-envios / PR-7 Chunk B — the create
+            // wizard. Lazy-loaded so the list + detail
+            // bundles stay small.
+            path: 'new',
+            loadComponent: () =>
+              import('./features/shipments/wizard/shipment-create').then(
+                (m) => m.ShipmentCreateComponent,
+              ),
+          },
+          {
+            path: ':id',
+            loadComponent: () =>
+              import('./features/shipments/detail/shipment-detail').then(
+                (m) => m.ShipmentDetailComponent,
+              ),
+          },
+          {
+            // etapa-3-envios / PR-7 Chunk B — the edit page.
+            // Only valid when the shipment is in PRE_ALTA
+            // (enforced by the backend and surfaced via an
+            // inline error banner on the page when the user
+            // hits it from a non-editable state).
+            path: ':id/edit',
+            loadComponent: () =>
+              import('./features/shipments/edit/shipment-edit').then(
+                (m) => m.ShipmentEditComponent,
+              ),
           },
         ],
       },

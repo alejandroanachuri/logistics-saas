@@ -1,0 +1,144 @@
+<section data-testid="customer-list" class="space-y-6">
+  <!-- Header: H1 + primary CTA (admin OR operator) -->
+  <header class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold text-on-surface">Clientes</h1>
+      <p class="mt-1 text-sm text-on-surface-variant">
+        Gestioná los clientes de tu empresa. Las personas con rol de operador
+        o administrador pueden crear y editar clientes.
+      </p>
+    </div>
+    @if (canCreate()) {
+      <a
+        routerLink="/auth/customers/new"
+        data-testid="new-customer-cta"
+        class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-on-primary hover:bg-primary-fixed-dim focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+      >
+        + Nuevo cliente
+      </a>
+    }
+  </header>
+
+  <!-- Filter bar: search + status -->
+  <div
+    class="grid grid-cols-1 gap-3 rounded-md border border-outline-variant bg-surface-container-lowest p-4 md:grid-cols-2"
+    aria-label="Filtros"
+  >
+    <div class="space-y-1">
+      <label for="customer-search" class="block text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+        Buscar
+      </label>
+      <input
+        id="customer-search"
+        type="search"
+        [value]="searchTerm()"
+        (input)="onSearchChange($any($event.target).value)"
+        placeholder="Nombre, razón social, email, DNI o CUIT"
+        class="block w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+      />
+    </div>
+    <div class="space-y-1">
+      <label for="customer-status" class="block text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+        Estado
+      </label>
+      <select
+        id="customer-status"
+        [value]="statusFilter()"
+        (change)="onStatusChange($any($event.target).value)"
+        class="block w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+      >
+        <option value="ALL">Todos</option>
+        <option value="ACTIVE">Activos</option>
+        <option value="DISABLED">Deshabilitados</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Empty state -->
+  @if (showEmptyState()) {
+    <app-empty-state
+      icon="👤"
+      title="Todavía no tenés clientes"
+      message="Sumá el primero para empezar a gestionar envíos y remitentes."
+      ctaLabel="+ Nuevo cliente"
+      (ctaClick)="goToCreateCustomer()"
+    />
+  }
+
+  <!-- Data table -->
+  @if (showTable()) {
+    <div class="rounded-md border border-outline-variant bg-surface-container-lowest p-4">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="text-on-surface-variant">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Tipo</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Nombre / Razón social</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">DNI / CUIT</th>
+              <th class="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide md:table-cell">Teléfono</th>
+              <th class="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide md:table-cell">Email</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Estado</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rows(); track row.id) {
+              <tr data-row class="border-t border-outline-variant">
+                <td class="px-4 py-3 text-on-surface-variant">{{ displayPersonType(row) }}</td>
+                <td class="px-4 py-3 text-on-surface">
+                  <a [routerLink]="['/auth/customers', row.id]" class="font-medium hover:underline">{{ displayName(row) }}</a>
+                </td>
+                <td class="px-4 py-3 text-on-surface">{{ displayDni(row.dni) }} {{ displayCuit(row.cuitCuil) }}</td>
+                <td class="hidden px-4 py-3 text-on-surface-variant md:table-cell">{{ row.phone }}</td>
+                <td class="hidden px-4 py-3 text-on-surface-variant md:table-cell">{{ row.email ?? '—' }}</td>
+                <td class="px-4 py-3">
+                  <app-status-badge [status]="row.status" />
+                </td>
+                <td class="px-4 py-3 text-right">
+                  <a
+                    [routerLink]="['/auth/customers', row.id]"
+                    class="inline-flex h-8 items-center rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-sm font-medium text-on-surface hover:bg-surface-container-low"
+                  >
+                    Ver detalle
+                  </a>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Pagination footer -->
+    <nav class="flex flex-wrap items-center justify-between gap-2" aria-label="Paginación">
+      <p class="text-sm text-on-surface-variant" data-pagination-summary>
+        Página {{ pagination().page }} · {{ pagination().total }} resultados
+      </p>
+      <div class="flex gap-2">
+        <button
+          type="button"
+          data-page-prev
+          [disabled]="pagination().page <= 1"
+          (click)="onPage({ page: pagination().page - 1, size: pagination().size })"
+          class="inline-flex h-9 items-center rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-sm font-medium text-on-surface hover:bg-surface-container-low disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Anterior
+        </button>
+        <button
+          type="button"
+          data-page-next
+          [disabled]="pagination().page * pagination().size >= pagination().total"
+          (click)="onPage({ page: pagination().page + 1, size: pagination().size })"
+          class="inline-flex h-9 items-center rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-sm font-medium text-on-surface hover:bg-surface-container-low disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Siguiente
+        </button>
+      </div>
+    </nav>
+  }
+
+  <!-- Loading state -->
+  @if (store.isLoading()) {
+    <p class="text-sm text-on-surface-variant" data-testid="loading">Cargando...</p>
+  }
+</section>

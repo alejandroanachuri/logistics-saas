@@ -80,6 +80,18 @@ public class AuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
             throws ServletException, IOException {
+        // Public routes skip auth entirely (PRD etapa-3 §9.1).
+        // No cookie parsing, no TenantContext binding, no
+        // SecurityContext setup — these endpoints are intentionally
+        // unauthenticated and the downstream controller decides how
+        // to enforce access (typically via the systemDataSource
+        // BYPASSRLS pool for cross-tenant lookup).
+        String requestPath = req.getRequestURI();
+        if (requestPath != null && requestPath.startsWith("/api/v1/public/")) {
+            chain.doFilter(req, res);
+            return;
+        }
+
         String rawCookie = extractAccessTokenCookie(req);
         if (rawCookie == null || rawCookie.isBlank()) {
             // No cookie — leave the context empty. The
@@ -135,11 +147,23 @@ public class AuthenticationFilter extends OncePerRequestFilter {
                     token.scope() == TokenScope.PLATFORM
                             ? TenantContextEntry.Scope.PLATFORM
                             : TenantContextEntry.Scope.COMPANY);
+            // Mark the active DataSource so RlsConnectionCustomizer
+            // knows whether to emit the SET LOCAL app.current_tenant GUC.
+            // Without this, isCompany() returns false on every request
+            // and the customizer early-returns at the top of register()
+            // — every INSERT/UPDATE/DELETE on a RLS-scoped table fails
+            // with "new row violates row-level security policy" because
+            // the session lacks the tenant GUC.
+            ar.com.logistics.tenant.DataSourceContext.set(
+                    token.scope() == TokenScope.PLATFORM
+                            ? ar.com.logistics.tenant.DataSourceContext.PLATFORM
+                            : ar.com.logistics.tenant.DataSourceContext.COMPANY);
         }
         try {
             chain.doFilter(req, res);
         } finally {
             // Clear the context to avoid leaking the principal
+            ar.com.logistics.tenant.DataSourceContext.clear();
             // into the next request in the same thread (defense
             // in depth; Spring Security's SecurityContextHolder
             // is THREAD_LOCAL by default and Tomcat reuses

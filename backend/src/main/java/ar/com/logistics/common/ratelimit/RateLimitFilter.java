@@ -34,6 +34,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
  *   <li>10 / minute on {@code POST /api/v1/auth/login} and
  *       {@code POST /api/v1/platform/auth/login}
  *   <li>30 / minute on the three availability endpoints
+ *   <li>30 / hour / IP on the public tracking portal
+ *       {@code GET /api/v1/public/track/{lgstid}} (PRD etapa-3 §9.1)
  * </ul>
  *
  * <p>On consumption: response carries the standard
@@ -54,6 +56,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final Map<String, Bucket> registerBuckets = new ConcurrentHashMap<>();
     private final Map<String, Bucket> loginBuckets = new ConcurrentHashMap<>();
     private final Map<String, Bucket> availabilityBuckets = new ConcurrentHashMap<>();
+    private final Map<String, Bucket> publicTrackBuckets = new ConcurrentHashMap<>();
 
     public RateLimitFilter(
             RateLimitProperties props, AuditLogger auditLogger, tools.jackson.databind.ObjectMapper objectMapper) {
@@ -126,6 +129,15 @@ public class RateLimitFilter extends OncePerRequestFilter {
                         || path.startsWith("/api/v1/tenants/me/username-availability"))) {
             return availabilityBuckets.computeIfAbsent(
                     ip, k -> newBucket(props.availabilityPerMinute(), Duration.ofMinutes(1)));
+        }
+        // Public tracking portal: same keying rule (per client IP) but
+        // hourly bucket — abused scrapers hitting the same {lgstid}
+        // pattern would otherwise burn the 30/min availability bucket
+        // on the wrong endpoint class. PRD etapa-3 §9.1 calls for 30
+        // req / IP / hora; mirror it from RateLimitProperties.
+        if ("GET".equals(method) && path.startsWith("/api/v1/public/track/")) {
+            return publicTrackBuckets.computeIfAbsent(
+                    ip, k -> newBucket(props.publicTrackPerHour(), Duration.ofHours(1)));
         }
         return null;
     }

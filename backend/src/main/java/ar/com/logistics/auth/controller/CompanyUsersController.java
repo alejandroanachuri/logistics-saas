@@ -86,7 +86,10 @@ public class CompanyUsersController {
         // a client requesting size=10000. Cap is generous (100 rows
         // per page is plenty for a small-team admin UI).
         int safeSize = Math.max(1, Math.min(size, MAX_PAGE_SIZE));
-        int safePage = Math.max(0, page);
+        // Page is 1-indexed from the client (matches the frontend
+        // convention used by the team pages). Convert to Spring Data's
+        // 0-indexed page for PageRequest.of(safePage, safeSize, sort).
+        int safePage = Math.max(0, page - 1);
         Sort sortSpec = parseSort(sort);
         Pageable pageable = PageRequest.of(safePage, safeSize, sortSpec);
         CompanyUsersService.ListFilters filters =

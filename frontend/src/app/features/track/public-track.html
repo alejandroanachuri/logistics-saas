@@ -1,0 +1,89 @@
+<section
+  class="rounded-lg border border-outline-variant bg-surface p-6 shadow-sm"
+  data-testid="public-track-page"
+>
+  @if (errorMessage(); as message) {
+    <div
+      class="rounded border border-error bg-error-container p-4 text-on-error-container"
+      role="alert"
+      data-error-message
+    >
+      <p class="text-base font-medium">{{ message }}</p>
+      <p class="mt-1 text-sm">Verificá que el código esté bien escrito y volvé a intentarlo.</p>
+    </div>
+  } @else if (response(); as resp) {
+    <header class="border-b border-outline-variant pb-4">
+      <p class="text-xs uppercase tracking-wide text-on-surface-variant">Código de seguimiento</p>
+      <p
+        class="mt-1 break-all font-mono text-2xl font-semibold text-on-surface sm:text-3xl"
+        data-tracking-id
+      >
+        {{ resp.trackingId }}
+      </p>
+
+      <div class="mt-4 flex flex-wrap items-center gap-2">
+        <span
+          class="inline-flex items-center rounded-full bg-primary-container px-3 py-1 text-sm font-medium text-on-primary-container"
+          data-status-badge
+        >
+          {{ resp.statusMessage }}
+        </span>
+
+        @if (isPartial()) {
+          <span
+            class="inline-flex items-center rounded-full bg-tertiary-container px-3 py-1 text-sm font-medium text-on-tertiary-container"
+            data-partial-indicator
+          >
+            Entregado parcialmente
+          </span>
+        }
+      </div>
+    </header>
+
+    <dl class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div class="rounded bg-surface-container-low p-4">
+        <dt class="text-xs uppercase tracking-wide text-on-surface-variant">Paquetes</dt>
+        <dd class="mt-1 text-2xl font-semibold text-on-surface" data-package-count>
+          {{ resp.packageCount }}
+        </dd>
+      </div>
+
+      <div class="rounded bg-surface-container-low p-4">
+        <dt class="text-xs uppercase tracking-wide text-on-surface-variant">Peso total</dt>
+        <dd class="mt-1 text-2xl font-semibold text-on-surface" data-total-weight>
+          {{ formattedWeight() }}
+        </dd>
+      </div>
+
+      <div class="rounded bg-surface-container-low p-4">
+        <dt class="text-xs uppercase tracking-wide text-on-surface-variant">Destinatario</dt>
+        <dd class="mt-1 text-lg font-semibold text-on-surface" data-receiver>
+          {{ resp.receiverName }}
+        </dd>
+      </div>
+    </dl>
+
+    <section class="mt-8" data-public-timeline>
+      <h2 class="text-lg font-semibold text-on-surface">Estado del envío</h2>
+
+      @if (resp.timeline.length === 0) {
+        <p class="mt-2 text-sm text-on-surface-variant">Sin eventos registrados todavía.</p>
+      } @else {
+        <ol class="mt-4 space-y-4" data-public-timeline-list>
+          @for (event of resp.timeline; track event.timestamp) {
+            <li class="border-l-2 border-primary pl-4 py-2" data-public-event>
+              <p class="text-sm font-medium text-on-surface">
+                {{ event.message }}
+              </p>
+              <p class="text-xs text-on-surface-variant">
+                {{ event.timestamp | date: 'short' }}
+              </p>
+            </li>
+          }
+        </ol>
+      }
+    </section>
+  } @else {
+    <p class="text-sm text-on-surface-variant" data-loading-state>Cargando…</p>
+  }
+</section>

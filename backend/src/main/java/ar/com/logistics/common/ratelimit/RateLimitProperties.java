@@ -14,6 +14,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *   <li>10 / minute on {@code POST /api/v1/auth/login} and
  *       {@code POST /api/v1/platform/auth/login}</li>
  *   <li>30 / minute on the three availability endpoints</li>
+ *   <li>30 / hour / IP on the public tracking portal
+ *       ({@code GET /api/v1/public/track/{lgstid}} — PRD etapa-3
+ *       §9.1).</li>
  * </ul>
  *
  * <p>Setting {@code enabled = false} bypasses the filter entirely
@@ -22,4 +25,4 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  */
 @ConfigurationProperties(prefix = "app.rate-limit")
 public record RateLimitProperties(
-        boolean enabled, int registerPerHour, int loginPerMinute, int availabilityPerMinute) {}
+        boolean enabled, int registerPerHour, int loginPerMinute, int availabilityPerMinute, int publicTrackPerHour) {}

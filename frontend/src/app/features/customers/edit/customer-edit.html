@@ -1,0 +1,43 @@
+<section data-testid="customer-edit" class="space-y-6">
+  <header class="space-y-1">
+    <h1 class="text-2xl font-semibold text-on-surface">Editar cliente</h1>
+    <p class="text-sm text-on-surface-variant">
+      Modificá la información del cliente. El tipo de persona no se puede cambiar
+      una vez creado.
+    </p>
+  </header>
+
+  <div
+    class="max-w-xl space-y-5 rounded-md border border-outline-variant bg-surface-container-lowest p-6"
+    data-testid="customer-edit-form"
+  >
+    @if (customer(); as c) {
+      <app-customer-form [customer]="c" (submit)="onSubmit($event)" />
+    } @else {
+      <p class="text-sm text-on-surface-variant" data-testid="loading">Cargando...</p>
+    }
+
+    <!-- Error -->
+    @if (errorMessage(); as err) {
+      <p class="text-sm text-error" role="alert" data-testid="error">{{ err }}</p>
+    }
+
+    <!-- Footer -->
+    <div class="flex flex-wrap items-center justify-between gap-2 pt-2">
+      <a
+        [routerLink]="['/auth/customers', targetCustomerId()]"
+        data-testid="cancel-link"
+        class="inline-flex h-9 items-center rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-sm font-medium text-on-surface hover:bg-surface-container-low focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      >
+        Cancelar
+      </a>
+      <p class="text-xs text-on-surface-variant">
+        @if (isSubmitting()) {
+          Guardando...
+        } @else {
+          Usá el botón Guardar del formulario para aplicar los cambios.
+        }
+      </p>
+    </div>
+  </div>
+</section>

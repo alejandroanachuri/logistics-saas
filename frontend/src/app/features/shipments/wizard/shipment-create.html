@@ -1,0 +1,115 @@
+<div class="mx-auto w-full max-w-4xl px-4 py-8" data-testid="shipment-create-wizard">
+  <header class="mb-6 space-y-1">
+    <h1 class="text-2xl font-semibold text-on-surface">Nuevo envío</h1>
+    <p class="text-sm text-on-surface-variant">
+      Creá un envío en tres pasos: clientes, paquetes y confirmación.
+    </p>
+  </header>
+
+  <!-- Stepper header -->
+  <ol
+    class="mb-6 flex items-center gap-3 text-sm"
+    data-testid="stepper-header"
+    aria-label="Pasos del envío"
+  >
+    <li
+      class="rounded-md px-2 py-1"
+      [class.font-semibold]="currentStepIndex() === 0"
+      [class.text-on-surface]="currentStepIndex() === 0"
+      [class.text-on-surface-variant]="currentStepIndex() !== 0"
+      data-testid="step-label-customers"
+    >
+      1. Clientes
+    </li>
+    <li class="text-outline-variant">›</li>
+    <li
+      class="rounded-md px-2 py-1"
+      [class.font-semibold]="currentStepIndex() === 1"
+      [class.text-on-surface]="currentStepIndex() === 1"
+      [class.text-on-surface-variant]="currentStepIndex() !== 1"
+      data-testid="step-label-packages"
+    >
+      2. Paquetes
+    </li>
+    <li class="text-outline-variant">›</li>
+    <li
+      class="rounded-md px-2 py-1"
+      [class.font-semibold]="currentStepIndex() === 2"
+      [class.text-on-surface]="currentStepIndex() === 2"
+      [class.text-on-surface-variant]="currentStepIndex() !== 2"
+      data-testid="step-label-confirm"
+    >
+      3. Confirmación
+    </li>
+  </ol>
+
+  <!-- Step bodies — all 3 in the DOM, hidden via [class.hidden] -->
+  <div data-testid="step-body-customers" [class.hidden]="currentStepIndex() !== 0">
+    <app-shipment-create-step-1-customers />
+  </div>
+  <div data-testid="step-body-packages" [class.hidden]="currentStepIndex() !== 1">
+    <app-shipment-create-step-2-packages />
+  </div>
+  <div data-testid="step-body-confirm" [class.hidden]="currentStepIndex() !== 2">
+    <app-shipment-create-step-3-confirm (confirmed)="onConfirmed($event)" />
+  </div>
+
+  <!-- Top-level error region -->
+  <div
+    role="status"
+    aria-live="polite"
+    class="min-h-[1.25rem] mt-4 text-sm text-error"
+    data-testid="wizard-error"
+  >
+    {{ errorMessage() }}
+  </div>
+
+  <!-- Action row -->
+  <div class="mt-6 flex flex-wrap items-center justify-between gap-2">
+    <button
+      type="button"
+      (click)="cancel()"
+      data-testid="wizard-cancel"
+      class="inline-flex items-center justify-center rounded-md border border-outline-variant bg-surface-container-lowest px-4 py-2 text-sm font-medium text-on-surface hover:bg-surface-container-low focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+    >
+      Cancelar
+    </button>
+
+    <div class="flex gap-2">
+      <button
+        type="button"
+        (click)="previous()"
+        [disabled]="currentStepIndex() === 0"
+        data-testid="stepper-prev"
+        class="inline-flex items-center justify-center rounded-md border border-outline-variant bg-surface-container-lowest px-4 py-2 text-sm font-medium text-on-surface hover:bg-surface-container-low focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        Atrás
+      </button>
+      @if (currentStepIndex() < 2) {
+        <button
+          type="button"
+          (click)="next()"
+          [disabled]="!canAdvance()"
+          data-testid="stepper-next"
+          class="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-on-primary hover:bg-primary-fixed-dim focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Siguiente
+        </button>
+      } @else {
+        <button
+          type="button"
+          (click)="submit()"
+          [disabled]="!canAdvance() || isSubmitting()"
+          data-testid="submit-create"
+          class="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-on-primary hover:bg-primary-fixed-dim focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          @if (isSubmitting()) {
+            Creando envío...
+          } @else {
+            Crear envío
+          }
+        </button>
+      }
+    </div>
+  </div>
+</div>

@@ -46,6 +46,13 @@ function titleForUrl(url: string): string {
   if (path.match(/^\/auth\/team\/[^/]+\/edit\/?$/)) return 'Editar usuario';
   if (path.match(/^\/auth\/team\/[^/]+\/?$/)) return 'Detalle del usuario';
   if (path === '/auth/team' || path.startsWith('/auth/team')) return 'Equipo';
+  // etapa-3-envios / PR-7 (Chunk A — list + detail, Chunk B
+  // — wizard + edit). The wizard route is checked BEFORE the
+  // edit regex so the `/new` suffix wins.
+  if (path === '/auth/shipments/new' || path.startsWith('/auth/shipments/new/')) return 'Nuevo envío';
+  if (path.match(/^\/auth\/shipments\/[^/]+\/edit\/?$/)) return 'Editar envío';
+  if (path.match(/^\/auth\/shipments\/[^/]+\/?$/)) return 'Detalle del envío';
+  if (path === '/auth/shipments' || path.startsWith('/auth/shipments')) return 'Envíos';
   if (path === '/auth/dashboard') return 'Dashboard';
   // Legacy paths (pre-refactor-1 routes still recognised so
   // title updates correctly during the NavigationEnd that
@@ -144,8 +151,35 @@ export class AuthLayoutComponent {
       // app.routes.ts forwards to `/auth/team` so the user
       // lands inside the shell without a flash.
       { label: 'Dashboard', icon: '◉', route: '/auth/dashboard' },
-      { label: 'Envíos', icon: '➤', route: '/shipments', disabled: true, disabledHint: 'Próximamente' },
-      { label: 'Clientes', icon: '◐', route: '/customers', disabled: true, disabledHint: 'Próximamente' },
+      // etapa-3-envios / PR-7 Chunk A: the Envíos item is
+      // enabled here. ADMIN OR OPERATOR roles can see the
+      // link — both roles operate shipments at the branch.
+      // VIEWER/DRIVER can still navigate to /auth/shipments
+      // via the route guard (which permits any authenticated
+      // company user); the sidebar just hides the link for
+      // them to reduce visual clutter.
+      {
+        label: 'Envíos',
+        icon: '➤',
+        route: '/auth/shipments',
+        visible: () =>
+          this.authStore.currentUserIsAdmin() ||
+          this.authStore.currentUserRoles().includes('COMPANY_OPERATOR'),
+      },
+      // etapa-3-envios / PR-6 Chunk B: the Clientes item is
+      // enabled here. AuthStore has no `currentUserIsOperator`
+      // computed yet, so the gate uses the same local-fallback
+      // pattern as Chunk A's per-page gate: ADMIN OR OPERATOR
+      // roles can see the link. VIEWER/DRIVER do not — they
+      // don't create or edit customers.
+      {
+        label: 'Clientes',
+        icon: '◐',
+        route: '/auth/customers',
+        visible: () =>
+          this.authStore.currentUserIsAdmin() ||
+          this.authStore.currentUserRoles().includes('COMPANY_OPERATOR'),
+      },
       { label: 'Reportes', icon: '◈', route: '/reports', disabled: true, disabledHint: 'Próximamente' },
       { label: 'Configuración', icon: '⚙', route: '/settings', disabled: true, disabledHint: 'Próximamente' },
     ];

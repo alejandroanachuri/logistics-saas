@@ -106,6 +106,10 @@ public class SecurityConfig {
                                 "/api/v1/tenants/me/slug-availability",
                                 "/api/v1/tenants/me/cuit-availability",
                                 "/api/v1/tenants/me/username-availability",
+                                // Public tracking portal — no cookie, no tenant
+                                // binding. AuthenticationFilter and RateLimitFilter
+                                // enforce IP-based rate-limit + early-return.
+                                "/api/v1/public/**",
                                 "/actuator/health")
                         .permitAll()
                         // Everything else requires a valid access_token
