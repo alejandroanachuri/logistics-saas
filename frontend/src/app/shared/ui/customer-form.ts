@@ -22,10 +22,16 @@ import {
  * the FISICA and JURIDICA branches; the receiver picks one path
  * and the other branch's fields are dropped on submit.
  *
- * <p>{@code dataConsent} MUST be {@code true} — the backend
- * refuses to persist a customer without PDP consent (Ley
- * 25.326). The checkbox is therefore required by the form
- * and the emit only fires once it is ticked.
+ * <p><b>Minimum-viable mode</b> (added in etapa-3 follow-up): the
+ * caller can set {@link CustomerFormData.minimumViable} to {@code true}
+ * to relax the validators — phone becomes optional, the dataConsent
+ * checkbox becomes optional (defaults to false), and the
+ * taxCondition defaults to {@code NO_CATEGORIZADO}. This is the
+ * mode used by the "create from wizard" flow, where the operator
+ * often has only a name and a phone (or just a name) for a
+ * recipient. The backend will accept the relaxed payload (the
+ * server-side validators allow optional phone + NO_CATEGORIZADO
+ * for tax condition).
  */
 export interface CustomerFormData {
   personType: CustomerPersonType;
@@ -38,6 +44,14 @@ export interface CustomerFormData {
   phone: string;
   email?: string;
   dataConsent: boolean;
+
+  /**
+   * If true, the form relaxed the validators (phone optional,
+   * dataConsent optional, taxCondition default to NO_CATEGORIZADO)
+   * to support a quick-create flow from the shipment wizard. The
+   * backend will accept the relaxed payload.
+   */
+  minimumViable?: boolean;
 }
 
 interface CustomerFormShape {
@@ -97,6 +111,16 @@ const TAX_CONDITIONS: ReadonlyArray<{ value: CustomerTaxCondition; label: string
       data-customer-form
       novalidate
     >
+      @if (minimumViable()) {
+        <p
+          role="status"
+          class="rounded-md border border-tertiary-container bg-tertiary-container px-3 py-2 text-xs text-on-tertiary-container"
+          data-minimum-viable-banner
+        >
+          Modo rápido: los campos marcados con <span class="text-error" aria-hidden="true">*</span> son obligatorios, el resto los podés completar después editando el cliente.
+        </p>
+      }
+
       <fieldset class="space-y-2">
         <legend class="text-sm font-medium text-on-surface">Tipo de persona</legend>
         <div class="flex gap-4">
@@ -189,7 +213,9 @@ const TAX_CONDITIONS: ReadonlyArray<{ value: CustomerTaxCondition; label: string
       }
 
       <label class="block space-y-1.5">
-        <span class="block text-sm font-medium text-on-surface">Condición frente al IVA</span>
+        <span class="block text-sm font-medium text-on-surface">
+          Condición frente al IVA @if (minimumViable()) { <span class="text-xs text-on-surface-variant">(opcional — default "No categorizado")</span> }
+        </span>
         <select
           formControlName="taxCondition"
           data-field="taxCondition"
@@ -204,7 +230,8 @@ const TAX_CONDITIONS: ReadonlyArray<{ value: CustomerTaxCondition; label: string
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <label class="block space-y-1.5">
           <span class="block text-sm font-medium text-on-surface">
-            Teléfono <span class="text-error" aria-hidden="true">*</span>
+            Teléfono @if (!minimumViable()) { <span class="text-error" aria-hidden="true">*</span> }
+            @if (minimumViable()) { <span class="text-xs text-on-surface-variant">(opcional)</span> }
           </span>
           <input
             type="tel"
@@ -217,7 +244,9 @@ const TAX_CONDITIONS: ReadonlyArray<{ value: CustomerTaxCondition; label: string
           }
         </label>
         <label class="block space-y-1.5">
-          <span class="block text-sm font-medium text-on-surface">Email</span>
+          <span class="block text-sm font-medium text-on-surface">
+            Email @if (minimumViable()) { <span class="text-xs text-on-surface-variant">(opcional)</span> }
+          </span>
           <input
             type="email"
             formControlName="email"
@@ -239,7 +268,8 @@ const TAX_CONDITIONS: ReadonlyArray<{ value: CustomerTaxCondition; label: string
         />
         <span>
           Acepto el tratamiento de mis datos personales conforme a la Ley 25.326 (PDP).
-          <span class="text-error" aria-hidden="true">*</span>
+          @if (!minimumViable()) { <span class="text-error" aria-hidden="true">*</span> }
+          @if (minimumViable()) { <span class="text-xs text-on-surface-variant">(opcional en modo rápido)</span> }
         </span>
       </label>
       @if (showFieldError('dataConsent'); as err) {
@@ -263,6 +293,15 @@ export class CustomerFormComponent {
   /** Optional existing customer (edit mode). When null the
    * form renders empty (create mode). */
   readonly customer = input<Customer | null>(null);
+
+  /**
+   * When true, the form relaxes validators for a quick-create
+   * flow (used by the "create from wizard" CTA). Phone and
+   * dataConsent become optional, taxCondition defaults to
+   * NO_CATEGORIZADO. A small banner in the form explains the
+   * mode to the operator. Backend accepts the relaxed payload.
+   */
+  readonly minimumViable = input<boolean>(false);
 
   /** Emits the form data on submit. The parent owns the
    * API call + navigation. */
@@ -301,13 +340,15 @@ export class CustomerFormComponent {
         { validators: [Validators.required] },
       ),
       phone: this.fb.nonNullable.control<string>('', {
-        validators: [Validators.required, Validators.minLength(6)],
+        // Validator applied by the minimumViable effect below.
+        validators: [Validators.minLength(6)],
       }),
       email: this.fb.nonNullable.control<string>('', {
         validators: [Validators.email],
       }),
       dataConsent: this.fb.nonNullable.control<boolean>(false, {
-        validators: [Validators.requiredTrue],
+        // Validator applied by the minimumViable effect below.
+        validators: [],
       }),
     });
 
@@ -332,7 +373,29 @@ export class CustomerFormComponent {
       }
     });
 
+    // Apply minimum-viable mode: relax phone + dataConsent and
+    // default taxCondition to NO_CATEGORIZADO. Runs whenever the
+    // input flips (or stays the same — we set it on every effect
+    // run because the validator set is stable).
+    effect(() => {
+      const mv = this.minimumViable();
+      if (mv) {
+        this.form.controls.phone.setValidators([Validators.minLength(6)]);
+        this.form.controls.dataConsent.setValidators([]);
+        this.form.controls.taxCondition.setValue('NO_CATEGORIZADO');
+      } else {
+        this.form.controls.phone.setValidators([Validators.required, Validators.minLength(6)]);
+        this.form.controls.dataConsent.setValidators([Validators.requiredTrue]);
+      }
+      this.form.controls.phone.updateValueAndValidity();
+      this.form.controls.dataConsent.updateValueAndValidity();
+      this.form.controls.taxCondition.updateValueAndValidity();
+    });
+
     // Pre-fill when the customer input is set (edit mode).
+    // When minimumViable is true AND there's no pre-fill, skip
+    // setting the taxCondition default to NO_CATEGORIZADO (the
+    // effect above already set it).
     effect(() => {
       const existing = this.customer();
       if (!existing) return;
@@ -398,6 +461,7 @@ export class CustomerFormComponent {
       phone: v.phone,
       email: v.email || undefined,
       dataConsent: v.dataConsent,
+      minimumViable: this.minimumViable(),
     };
     this.submit.emit(data);
   }

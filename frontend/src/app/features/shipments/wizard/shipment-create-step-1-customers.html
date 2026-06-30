@@ -64,6 +64,14 @@
             }
           </ul>
         }
+        <a
+          [routerLink]="createCustomerLink('sender').path"
+          [queryParams]="createCustomerLink('sender').queryParams"
+          [attr.data-testid]="'sender-create-new'"
+          class="inline-flex h-8 items-center rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-xs font-medium text-on-surface hover:bg-surface-container-low"
+        >
+          + Crear nuevo cliente
+        </a>
       }
     </div>
 
@@ -122,6 +130,14 @@
             }
           </ul>
         }
+        <a
+          [routerLink]="createCustomerLink('receiver').path"
+          [queryParams]="createCustomerLink('receiver').queryParams"
+          [attr.data-testid]="'receiver-create-new'"
+          class="inline-flex h-8 items-center rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-xs font-medium text-on-surface hover:bg-surface-container-low"
+        >
+          + Crear nuevo cliente
+        </a>
       }
     </div>
   </div>

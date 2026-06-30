@@ -1,10 +1,21 @@
 <section data-testid="customer-create" class="space-y-6">
   <header class="space-y-1">
     <h1 class="text-2xl font-semibold text-on-surface">Nuevo cliente</h1>
-    <p class="text-sm text-on-surface-variant">
-      Sumá un nuevo cliente a tu empresa. La dirección se carga después desde
-      el detalle del cliente.
-    </p>
+    @if (minimumViable()) {
+      <p
+        class="rounded-md border border-tertiary-container bg-tertiary-container px-3 py-2 text-sm text-on-tertiary-container"
+        data-minimum-viable-banner
+      >
+        Estás creando un cliente para un envío. Después de crearlo, vas a volver
+        automáticamente al wizard de envío con este cliente pre-seleccionado.
+        Podés dejar los campos opcionales vacíos y completarlos más tarde.
+      </p>
+    } @else {
+      <p class="text-sm text-on-surface-variant">
+        Sumá un nuevo cliente a tu empresa. La dirección se carga después desde
+        el detalle del cliente.
+      </p>
+    }
   </header>
 
   <div
@@ -12,12 +23,17 @@
     data-testid="customer-create-form"
   >
     <h2 class="text-lg font-semibold text-on-surface">Datos personales</h2>
-    <p class="text-xs text-on-surface-variant">
-      Seleccioná el tipo de persona. Los campos DNI / CUIT son obligatorios
-      según corresponda. El consentimiento de datos es obligatorio (Ley 25.326).
-    </p>
+    @if (!minimumViable()) {
+      <p class="text-xs text-on-surface-variant">
+        Seleccioná el tipo de persona. Los campos DNI / CUIT son obligatorios
+        según corresponda. El consentimiento de datos es obligatorio (Ley 25.326).
+      </p>
+    }
 
-    <app-customer-form (submit)="onSubmit($event)" />
+    <app-customer-form
+      [minimumViable]="minimumViable()"
+      (submit)="onSubmit($event)"
+    />
 
     <!-- Error + footer -->
     @if (errorMessage(); as err) {
@@ -25,13 +41,14 @@
     }
 
     <div class="flex flex-wrap items-center justify-between gap-2 pt-2">
-      <a
-        routerLink="/auth/customers"
+      <button
+        type="button"
+        (click)="onCancel()"
         data-testid="cancel-link"
         class="inline-flex h-9 items-center rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-sm font-medium text-on-surface hover:bg-surface-container-low focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
         Cancelar
-      </a>
+      </button>
       <p class="text-xs text-on-surface-variant">
         @if (isSubmitting()) {
           Creando...

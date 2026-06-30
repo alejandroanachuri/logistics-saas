@@ -2,14 +2,17 @@ import {
   ChangeDetectionStrategy,
   Component,
   ViewChild,
+  effect,
   inject,
   signal,
   OnInit,
 } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 
+import { CustomersService } from '../../../core/services/customers.service';
 import { ShipmentsStore } from '../../../core/state/shipments-store';
-import { CreateShipmentRequest } from '../../../core/types';
+import { CreateShipmentRequest, Customer } from '../../../core/types';
 import { ShipmentCreateStep1CustomersComponent } from './shipment-create-step-1-customers';
 import { ShipmentCreateStep2PackagesComponent } from './shipment-create-step-2-packages';
 import { ShipmentCreateStep3ConfirmComponent } from './shipment-create-step-3-confirm';
@@ -65,6 +68,18 @@ export class ShipmentCreateComponent implements OnInit {
 
   private readonly store = inject(ShipmentsStore);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly customersService = inject(CustomersService);
+
+  /**
+   * Pre-selected customer from the returnTo round-trip with the
+   * customer-create page. Captured at ngOnInit from the query
+   * params (?preSelected=<id>&role=sender|receiver) and pushed
+   * into the matching picker via effect (the customersStep is a
+   * ViewChild — we read its signal after view init).
+   */
+  private readonly preSelectedId = signal<string | null>(null);
+  private readonly preSelectedRole = signal<'sender' | 'receiver' | null>(null);
 
   /** Per-step validity — read in the template's [disabled]
    * binding on the "Siguiente" button and by {@link next} /
@@ -89,6 +104,17 @@ export class ShipmentCreateComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Capture the preSelected query params (if any) so the
+    // effect below can push the loaded customer into the matching
+    // picker.
+    const qp = this.route.snapshot.queryParamMap;
+    const preId = qp.get('preSelected');
+    const role = qp.get('role');
+    if (preId && (role === 'sender' || role === 'receiver')) {
+      this.preSelectedId.set(preId);
+      this.preSelectedRole.set(role);
+    }
+
     // Load the catalogs (branches + service levels). Future
     // chunks will wire these into the wizard's step 3
     // branches / service-level picker; for this chunk the
@@ -103,6 +129,30 @@ export class ShipmentCreateComponent implements OnInit {
     // a previous visit doesn't leak in.
     this.store.wizardReset();
   }
+
+  /**
+   * Effect: when the preSelectedId is set, load the customer
+   * and push it into the matching picker. Runs after the
+   * customersStep ViewChild is initialised (effect re-runs
+   * when either the id OR the step change).
+   */
+  private readonly preSelectedEffect = effect(() => {
+    const id = this.preSelectedId();
+    const role = this.preSelectedRole();
+    if (!id || !role) return;
+    if (!this.customersStep) return;
+    // Clear the URL params so a back-button reload doesn't re-apply.
+    void this.router.navigate([], {
+      queryParams: {},
+      replaceUrl: true,
+    });
+    void firstValueFrom(this.customersService.get(id)).then((c) => {
+      this.customersStep?.preSelectFromDetail(c, role);
+    }).catch(() => {
+      // Network / 404 — leave the picker empty, the operator
+      // can still select manually.
+    });
+  });
 
   next(): void {
     if (!this.canAdvance()) return;

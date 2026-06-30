@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Subject, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 
 import { CustomersService } from '../../../core/services/customers.service';
-import { CustomerSummary } from '../../../core/types';
+import { Customer, CustomerSummary } from '../../../core/types';
 import { maskDni } from '../../../core/utils/field-level-security';
 
 /** Which side of the shipment a customer picker is filling.
@@ -35,10 +36,13 @@ export type CustomerRole = 'sender' | 'receiver';
   selector: 'app-shipment-create-step-1-customers',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [RouterLink],
   templateUrl: './shipment-create-step-1-customers.html',
 })
 export class ShipmentCreateStep1CustomersComponent {
   private readonly customersService = inject(CustomersService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   /** Sender selection (the from-side of the shipment). */
   readonly senderSelection = signal<CustomerSummary | null>(null);
@@ -136,6 +140,60 @@ export class ShipmentCreateStep1CustomersComponent {
       this.senderSelection.set(null);
     } else {
       this.receiverSelection.set(null);
+    }
+  }
+
+  /**
+   * Build the link to the customer-create page for a given side,
+   * so the operator can create a new customer inline without
+   * leaving the wizard. The {@code returnTo} query param is the
+   * absolute path of this wizard; after creating, the
+   * customer-create page navigates back with {@code ?preSelected=}
+   * pointing at the new customer, and the wizard pre-fills the
+   * matching picker.
+   */
+  createCustomerLink(role: CustomerRole): { path: string[]; queryParams: Record<string, string> } {
+    const returnTo = this.router.getCurrentNavigation()?.finalUrl?.toString()
+      ?? this.router.url
+      ?? '/auth/shipments/new';
+    const queryParams: Record<string, string> = {
+      returnTo,
+      role,
+    };
+    return {
+      path: ['/auth/customers/new'],
+      queryParams,
+    };
+  }
+
+  /**
+   * Pre-fill the matching picker with a customer that was just
+   * created (or any other Customer that was passed back from a
+   * round-trip). Used by the orchestrator to consume the
+   * {@code ?preSelected=} query param. Accepts the full
+   * {@link Customer} from the detail endpoint and maps to the
+   * {@link CustomerSummary} shape the picker stores.
+   */
+  preSelectFromDetail(customer: Customer, role: CustomerRole): void {
+    const summary: CustomerSummary = {
+      id: customer.id,
+      firstName: customer.firstName,
+      lastName: customer.lastName,
+      razonSocial: customer.razonSocial,
+      email: customer.email,
+      phone: customer.phone,
+      dni: customer.dni,
+      cuitCuil: customer.cuitCuil,
+      taxCondition: customer.taxCondition,
+      // The detail response doesn't include status; default to ACTIVE
+      // for a customer the operator just created.
+      status: 'ACTIVE',
+      createdAt: customer.createdAt,
+    };
+    if (role === 'sender') {
+      this.senderSelection.set(summary);
+    } else {
+      this.receiverSelection.set(summary);
     }
   }
 
