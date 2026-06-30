@@ -77,7 +77,12 @@ public class CustomerController {
             @RequestParam(name = "search", required = false) String search) {
         UUID tenantId = currentTenantId();
         int safeSize = Math.max(1, Math.min(size, MAX_PAGE_SIZE));
-        int safePage = Math.max(0, page);
+        // Page is 1-indexed from the client (matches the frontend
+        // convention used by the team + customer pages). Convert to
+        // Spring Data's 0-indexed page for PageRequest.of(safePage,
+        // safeSize, sort). Without this conversion, page=1 maps to
+        // offset=10, missing the first page of results.
+        int safePage = Math.max(0, page - 1);
         Pageable pageable = PageRequest.of(safePage, safeSize, parseSort(sort));
         Page<Customer> rows = customerService.list(tenantId, new CustomerListFilters(search, status), pageable);
         return ResponseEntity.ok(PageResponse.of(rows.map(this::toSummaryDto)));
