@@ -215,7 +215,15 @@ public class CustomerController {
         // signalled by deletedAt != null. Project to ACTIVE/DISABLED
         // for the wire shape.
         String status = c.getDeletedAt() == null ? "ACTIVE" : "DISABLED";
-        return new CustomerSummaryDto(c.getId(), displayName(c), c.getEmail(), status);
+        return new CustomerSummaryDto(
+                c.getId(),
+                c.getPersonType(),
+                displayName(c),
+                c.getDni(),
+                c.getCuitCuil(),
+                c.getPhone(),
+                c.getEmail(),
+                status);
     }
 
     /** Customer detail for get / create / update responses. */
@@ -253,8 +261,25 @@ public class CustomerController {
     //  DTOs (nested records — small wire shape)
     // -------------------------------------------------------------------
 
-    /** Summary row for {@code GET /customers}. */
-    public record CustomerSummaryDto(UUID id, String name, String email, String status) {}
+    /**
+     * Summary row for {@code GET /customers}. Includes the fields the
+     * frontend list page needs (personType, name, dni/cuitCuil,
+     * phone, email, status). dni/cuitCuil are tagged with
+     * {@code @JsonView(Views.Default.class)} so the
+     * {@code JsonViewResponseAdvice} masks them for DRIVER/VIEWER
+     * roles. The frontend's field-level-security utility does the
+     * same on the client; both layers apply, defense in depth.
+     */
+    public record CustomerSummaryDto(
+            UUID id,
+            String personType,
+            String name,
+            @com.fasterxml.jackson.annotation.JsonView(ar.com.logistics.common.jsonview.Views.Default.class) String dni,
+            @com.fasterxml.jackson.annotation.JsonView(ar.com.logistics.common.jsonview.Views.Default.class)
+                    String cuitCuil,
+            String phone,
+            String email,
+            String status) {}
 
     /** Full detail for {@code GET /customers/{id}} + create/update responses. */
     public record CustomerDetailDto(

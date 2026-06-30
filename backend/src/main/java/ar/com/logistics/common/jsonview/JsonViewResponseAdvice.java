@@ -87,8 +87,14 @@ public class JsonViewResponseAdvice implements ResponseBodyAdvice<Object> {
      * etc.
      */
     private static final Set<Class<?>> SENSITIVE_BODY_TYPES = Set.of(
-            ar.com.logistics.shipment.domain.Customer.class
-            // Add new domain types here as @JsonView usage spreads.
+            ar.com.logistics.shipment.domain.Customer.class,
+            // The wire DTOs that the CustomerController returns.
+            // The advice only wraps entity types by default; we add
+            // the DTOs here so the @JsonView on dni/cuitCuil applies
+            // to the list-page response too.
+            ar.com.logistics.shipment.controller.CustomerController.CustomerSummaryDto.class,
+            ar.com.logistics.shipment.controller.CustomerController.CustomerDetailDto.class
+            // Add new domain types + DTOs here as @JsonView usage spreads.
             );
 
     private static boolean hasSensitiveFields(Class<?> type) {
