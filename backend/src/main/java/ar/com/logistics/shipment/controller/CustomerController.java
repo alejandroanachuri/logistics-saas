@@ -218,12 +218,15 @@ public class CustomerController {
         return new CustomerSummaryDto(
                 c.getId(),
                 c.getPersonType(),
-                displayName(c),
+                c.getFirstName(),
+                c.getLastName(),
+                c.getRazonSocial(),
                 c.getDni(),
                 c.getCuitCuil(),
                 c.getPhone(),
                 c.getEmail(),
-                status);
+                status,
+                c.getCreatedAt());
     }
 
     /** Customer detail for get / create / update responses. */
@@ -262,24 +265,34 @@ public class CustomerController {
     // -------------------------------------------------------------------
 
     /**
-     * Summary row for {@code GET /customers}. Includes the fields the
-     * frontend list page needs (personType, name, dni/cuitCuil,
-     * phone, email, status). dni/cuitCuil are tagged with
+     * Summary row for {@code GET /customers}.
+     *
+     * <p>The frontend list page reuses the same display helpers as the
+     * detail page: it expects the raw identity fields
+     * ({@code firstName}, {@code lastName}, {@code razonSocial})
+     * rather than a pre-concatenated {@code name}. Returning the
+     * split fields keeps the wire contract aligned with the existing
+     * Angular types and prevents the list from rendering "—" for the
+     * name column when the backend only sends a synthetic string.
+     *
+     * <p>{@code dni}/{@code cuitCuil} stay annotated with
      * {@code @JsonView(Views.Default.class)} so the
-     * {@code JsonViewResponseAdvice} masks them for DRIVER/VIEWER
-     * roles. The frontend's field-level-security utility does the
-     * same on the client; both layers apply, defense in depth.
+     * {@code JsonViewResponseAdvice} can mask them for
+     * DRIVER/VIEWER roles.
      */
     public record CustomerSummaryDto(
             UUID id,
             String personType,
-            String name,
+            String firstName,
+            String lastName,
+            String razonSocial,
             @com.fasterxml.jackson.annotation.JsonView(ar.com.logistics.common.jsonview.Views.Default.class) String dni,
             @com.fasterxml.jackson.annotation.JsonView(ar.com.logistics.common.jsonview.Views.Default.class)
                     String cuitCuil,
             String phone,
             String email,
-            String status) {}
+            String status,
+            Instant createdAt) {}
 
     /** Full detail for {@code GET /customers/{id}} + create/update responses. */
     public record CustomerDetailDto(

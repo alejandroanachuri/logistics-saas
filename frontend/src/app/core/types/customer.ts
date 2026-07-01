@@ -40,6 +40,7 @@ export type CustomerTaxCondition =
  * list page and the customer picker in the shipment form. */
 export interface CustomerSummary {
   id: string;
+  personType: CustomerPersonType;
   firstName: string | null;
   lastName: string | null;
   razonSocial: string | null;

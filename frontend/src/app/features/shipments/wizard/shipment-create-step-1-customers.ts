@@ -177,6 +177,7 @@ export class ShipmentCreateStep1CustomersComponent {
   preSelectFromDetail(customer: Customer, role: CustomerRole): void {
     const summary: CustomerSummary = {
       id: customer.id,
+      personType: customer.personType,
       firstName: customer.firstName,
       lastName: customer.lastName,
       razonSocial: customer.razonSocial,
