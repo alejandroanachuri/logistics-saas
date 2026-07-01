@@ -169,17 +169,31 @@ export class CustomerListComponent {
   }
 
   /**
-   * Returns the display-ready customer name already projected by the
-   * backend list DTO.
+   * Returns the display-ready customer name.
+   *
+   * Backend may return either a pre-computed `name` or the split
+   * identity fields. Prefer `name` when present, then fall back to
+   * razonSocial / first+last.
    */
   protected displayName(row: CustomerSummary): string {
     const name = row.name?.trim();
-    return name && name.length > 0 ? name : '—';
+    if (name && name.length > 0) return name;
+    const rs = row.razonSocial?.trim();
+    if (rs && rs.length > 0) return rs;
+    const f = (row.firstName ?? '').trim();
+    const l = (row.lastName ?? '').trim();
+    if (f && l) return `${f} ${l}`;
+    if (f) return f;
+    if (l) return l;
+    return '—';
   }
 
   /** Spanish label for the personType discriminator. */
   protected displayPersonType(row: CustomerSummary): string {
-    return row.personType === 'JURIDICA' ? 'Persona jurídica' : 'Persona física';
+    if (row.personType) {
+      return row.personType === 'JURIDICA' ? 'Persona jurídica' : 'Persona física';
+    }
+    return row.razonSocial ? 'Persona jurídica' : 'Persona física';
   }
 
   /** Friendly phone cell — empty string from the API still renders as —. */

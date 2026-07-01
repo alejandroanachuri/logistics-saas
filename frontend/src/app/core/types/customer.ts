@@ -36,14 +36,19 @@ export type CustomerTaxCondition =
 
 /** Single row in `GET /api/v1/customers` list response.
  *
- * Backend intentionally returns a list-oriented projection with a
- * pre-computed `name` string instead of the raw identity fields. The
- * customer list page consumes this directly, while the shipment
- * wizard's customer picker uses it as-is. */
+ * The backend list DTO evolved during post-merge stabilization.
+ * Some builds return a pre-computed `name`, others return the split
+ * identity fields (`firstName`, `lastName`, `razonSocial`). The
+ * frontend accepts BOTH so the list and shipment wizard stay stable
+ * while the contract settles.
+ */
 export interface CustomerSummary {
   id: string;
   personType: CustomerPersonType;
-  name: string;
+  name?: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  razonSocial?: string | null;
   email: string | null;
   phone: string;
   dni: string | null;

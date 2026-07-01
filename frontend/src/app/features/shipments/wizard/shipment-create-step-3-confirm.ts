@@ -134,10 +134,18 @@ export class ShipmentCreateStep3ConfirmComponent {
     this.confirmed.emit(payload);
   }
 
-  /** Display-friendly customer name already projected by the backend DTO. */
+  /** Display-friendly customer name with fallback to split fields. */
   displayName(row: CustomerSummary): string {
     const name = row.name?.trim();
-    return name && name.length > 0 ? name : '—';
+    if (name && name.length > 0) return name;
+    const rs = row.razonSocial?.trim();
+    if (rs && rs.length > 0) return rs;
+    const f = (row.firstName ?? '').trim();
+    const l = (row.lastName ?? '').trim();
+    if (f && l) return `${f} ${l}`;
+    if (f) return f;
+    if (l) return l;
+    return '—';
   }
 
   /** Spanish label for the category discriminator. */

@@ -182,6 +182,9 @@ export class ShipmentCreateStep1CustomersComponent {
       id: customer.id,
       personType: customer.personType,
       name,
+      firstName: customer.firstName,
+      lastName: customer.lastName,
+      razonSocial: customer.razonSocial,
       email: customer.email,
       phone: customer.phone,
       dni: customer.dni,
@@ -198,13 +201,18 @@ export class ShipmentCreateStep1CustomersComponent {
     }
   }
 
-  /**
-   * Display-friendly customer name already projected by the backend
-   * summary DTO.
-   */
+  /** Display-friendly customer name with fallback to split fields. */
   displayName(row: CustomerSummary): string {
     const name = row.name?.trim();
-    return name && name.length > 0 ? name : '—';
+    if (name && name.length > 0) return name;
+    const rs = row.razonSocial?.trim();
+    if (rs && rs.length > 0) return rs;
+    const f = (row.firstName ?? '').trim();
+    const l = (row.lastName ?? '').trim();
+    if (f && l) return `${f} ${l}`;
+    if (f) return f;
+    if (l) return l;
+    return '—';
   }
 
   /** Mask the DNI for display in the picker results. The backend
