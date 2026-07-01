@@ -175,17 +175,17 @@ export class ShipmentCreateStep1CustomersComponent {
    * {@link CustomerSummary} shape the picker stores.
    */
   preSelectFromDetail(customer: Customer, role: CustomerRole): void {
+    const name = customer.razonSocial
+      || [customer.firstName, customer.lastName].filter(Boolean).join(' ')
+      || '—';
     const summary: CustomerSummary = {
       id: customer.id,
       personType: customer.personType,
-      firstName: customer.firstName,
-      lastName: customer.lastName,
-      razonSocial: customer.razonSocial,
+      name,
       email: customer.email,
       phone: customer.phone,
       dni: customer.dni,
       cuitCuil: customer.cuitCuil,
-      taxCondition: customer.taxCondition,
       // The detail response doesn't include status; default to ACTIVE
       // for a customer the operator just created.
       status: 'ACTIVE',
@@ -198,17 +198,13 @@ export class ShipmentCreateStep1CustomersComponent {
     }
   }
 
-  /** Display-friendly customer name — razonSocial for JURIDICA,
-   * "First Last" for FISICA. Used in the picker results + the
-   * selected state. */
+  /**
+   * Display-friendly customer name already projected by the backend
+   * summary DTO.
+   */
   displayName(row: CustomerSummary): string {
-    if (row.razonSocial) return row.razonSocial;
-    const f = (row.firstName ?? '').trim();
-    const l = (row.lastName ?? '').trim();
-    if (f && l) return `${f} ${l}`;
-    if (f) return f;
-    if (l) return l;
-    return '—';
+    const name = row.name?.trim();
+    return name && name.length > 0 ? name : '—';
   }
 
   /** Mask the DNI for display in the picker results. The backend

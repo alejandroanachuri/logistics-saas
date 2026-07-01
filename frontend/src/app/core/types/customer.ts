@@ -34,21 +34,20 @@ export type CustomerTaxCondition =
   | 'CONSUMIDOR_FINAL'
   | 'NO_CATEGORIZADO';
 
-/** Single row in `GET /api/v1/customers` list response. Minimal
- * projection — first/last-name + email + status + DNI/CUIT
- * (already masked per JsonView rules). Used by the customer
- * list page and the customer picker in the shipment form. */
+/** Single row in `GET /api/v1/customers` list response.
+ *
+ * Backend intentionally returns a list-oriented projection with a
+ * pre-computed `name` string instead of the raw identity fields. The
+ * customer list page consumes this directly, while the shipment
+ * wizard's customer picker uses it as-is. */
 export interface CustomerSummary {
   id: string;
   personType: CustomerPersonType;
-  firstName: string | null;
-  lastName: string | null;
-  razonSocial: string | null;
+  name: string;
   email: string | null;
   phone: string;
   dni: string | null;
   cuitCuil: string | null;
-  taxCondition: CustomerTaxCondition;
   status: 'ACTIVE' | 'DISABLED';
   createdAt: string;
 }

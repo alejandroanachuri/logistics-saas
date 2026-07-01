@@ -168,25 +168,24 @@ export class CustomerListComponent {
     return this.maskSensitive() ? (maskCuit(cuit) ?? '—') : cuit;
   }
 
-  /** Returns the customer's display name: fullName for FISICA,
-   * razonSocial for JURIDICA. We use the `razonSocial` field
-   * as the JURIDICA discriminator — when it's populated, the
-   * record is a JURIDICA customer. */
+  /**
+   * Returns the display-ready customer name already projected by the
+   * backend list DTO.
+   */
   protected displayName(row: CustomerSummary): string {
-    if (row.razonSocial) return row.razonSocial;
-    const f = (row.firstName ?? '').trim();
-    const l = (row.lastName ?? '').trim();
-    if (f && l) return `${f} ${l}`;
-    if (f) return f;
-    if (l) return l;
-    return '—';
+    const name = row.name?.trim();
+    return name && name.length > 0 ? name : '—';
   }
 
-  /** Spanish label for the personType discriminator. The list
-   * summary does not carry an explicit `personType` field — we
-   * infer from `razonSocial`. */
+  /** Spanish label for the personType discriminator. */
   protected displayPersonType(row: CustomerSummary): string {
-    return row.razonSocial ? 'Persona jurídica' : 'Persona física';
+    return row.personType === 'JURIDICA' ? 'Persona jurídica' : 'Persona física';
+  }
+
+  /** Friendly phone cell — empty string from the API still renders as —. */
+  protected displayPhone(row: CustomerSummary): string {
+    const phone = row.phone?.trim();
+    return phone && phone.length > 0 ? phone : '—';
   }
 }
 

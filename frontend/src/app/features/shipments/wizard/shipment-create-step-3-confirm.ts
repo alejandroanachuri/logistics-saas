@@ -134,16 +134,10 @@ export class ShipmentCreateStep3ConfirmComponent {
     this.confirmed.emit(payload);
   }
 
-  /** Display-friendly customer name — razonSocial for JURIDICA,
-   * "First Last" for FISICA. Mirrors the picker step helper. */
+  /** Display-friendly customer name already projected by the backend DTO. */
   displayName(row: CustomerSummary): string {
-    if (row.razonSocial) return row.razonSocial;
-    const f = (row.firstName ?? '').trim();
-    const l = (row.lastName ?? '').trim();
-    if (f && l) return `${f} ${l}`;
-    if (f) return f;
-    if (l) return l;
-    return '—';
+    const name = row.name?.trim();
+    return name && name.length > 0 ? name : '—';
   }
 
   /** Spanish label for the category discriminator. */
